@@ -204,12 +204,21 @@ All components use CSS variables for theming:
 --accent-hover: Accent hover color
 ```
 
+## Recent Improvements
+
+1. ✅ **SpriteList** - Auto-loads sprites when a thing is selected
+2. ✅ **PreviewPanel** - Frame group selector (DEFAULT/WALKING) for outfits
+3. ✅ **ExportDialog** - Connected to app state for selected IDs
+4. ✅ **PreviewCanvas** - Multi-sprite composition with improved data format handling
+5. ✅ **FindDialog** - Navigate to thing when result is clicked
+6. ✅ **PreferencesDialog** - Save settings to backend via SettingsCommand
+7. ✅ **Toolbar** - Category changes automatically trigger thing list reload
+
 ## Next Steps
 
-1. Enhanced sprite rendering with multi-sprite composition
-2. Animation support in preview canvas
-3. More comprehensive ThingEditor with all properties
-4. Sprite preview thumbnails in SpriteList
-5. Drag and drop support
-6. Keyboard shortcuts
+1. ⏳ Animation support in preview canvas (partially implemented)
+2. ⏳ Load versions list in LoadFilesDialog
+3. ⏳ Drag and drop support
+4. ⏳ Keyboard shortcuts
+5. ⏳ Additional utility dialogs
 

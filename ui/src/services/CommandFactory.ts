@@ -148,5 +148,12 @@ export class CommandFactory {
       frameGroups,
     };
   }
+
+  static createSettingsCommand(settings: any): CommandData {
+    return {
+      type: 'SettingsCommand',
+      settings,
+    };
+  }
 }
 

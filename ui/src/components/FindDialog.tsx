@@ -14,7 +14,7 @@ interface FindDialogProps {
 
 export const FindDialog: React.FC<FindDialogProps> = ({ open, onClose }) => {
   const worker = useWorker();
-  const { currentCategory } = useAppStateContext();
+  const { currentCategory, setSelectedThingIds } = useAppStateContext();
   const { showError } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [searching, setSearching] = useState(false);
@@ -80,10 +80,22 @@ export const FindDialog: React.FC<FindDialogProps> = ({ open, onClose }) => {
     }
   };
 
-  const handleResultClick = (result: any) => {
-    // TODO: Navigate to thing
-    console.log('Selected result:', result);
-    onClose();
+  const handleResultClick = async (result: any) => {
+    if (result && result.id !== undefined) {
+      // Set the selected thing ID to navigate to it
+      setSelectedThingIds([result.id]);
+      
+      // Load the thing data
+      try {
+        const command = CommandFactory.createGetThingCommand(result.id, currentCategory);
+        await worker.sendCommand(command);
+      } catch (error: any) {
+        console.error('Failed to load thing:', error);
+        showError('Failed to load thing');
+      }
+      
+      onClose();
+    }
   };
 
   return (

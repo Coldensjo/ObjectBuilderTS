@@ -39,6 +39,10 @@
 - ✅ Electron IPC handlers fixed - registered before backend initialization
 - ✅ Canvas module rebuild script added for Electron compatibility
 - ✅ Backend initialization error handling improved
+- ✅ FindDialog - Navigate to thing when search result is clicked
+- ✅ PreferencesDialog - Save settings to backend via SettingsCommand
+- ✅ CommandFactory - Added createSettingsCommand method
+- ✅ Toolbar - Category changes automatically reload thing list
 
 ### Backend/Worker System (100% Complete)
 - ✅ `ObjectBuilderWorker.ts` - Complete worker implementation with all callbacks

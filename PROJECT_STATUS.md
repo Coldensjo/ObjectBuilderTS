@@ -28,11 +28,18 @@
 - Electron IPC handlers fixed and working
 - Canvas module rebuild support added
 
-### Remaining Work: ~5%
+### Remaining Work: ~3%
 - Animation support in preview (partially implemented)
+- Load versions list in LoadFilesDialog
 - Testing and validation
 - Performance optimization
 - Canvas module needs rebuild for Electron (run `npm run rebuild`)
+
+### Recent UI Improvements
+- ✅ FindDialog navigates to selected thing
+- ✅ PreferencesDialog saves settings to backend
+- ✅ All dialogs properly connected to backend
+- ✅ Category changes automatically reload thing lists
 
 ## 📁 Project Structure
 

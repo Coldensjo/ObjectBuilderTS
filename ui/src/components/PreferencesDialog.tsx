@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from './Button';
+import { useWorker } from '../contexts/WorkerContext';
+import { useToast } from '../hooks/useToast';
+import { CommandFactory } from '../services/CommandFactory';
 import './PreferencesDialog.css';
 
 interface PreferencesDialogProps {
@@ -14,22 +17,65 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
   onClose,
   onSave,
 }) => {
+  const worker = useWorker();
+  const { showSuccess, showError } = useToast();
   const [settings, setSettings] = useState({
     objectsListAmount: 100,
     spritesListAmount: 100,
     autosaveThingChanges: false,
   });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // TODO: Load settings from backend
-    // For now, use defaults
-  }, [open]);
+    // Listen for settings from backend
+    // Settings are sent via SettingsCommand when app initializes
+    const handleCommand = (command: any) => {
+      if (command.type === 'SettingsCommand' && command.data && command.data.settings) {
+        const settingsData = command.data.settings;
+        setSettings({
+          objectsListAmount: settingsData.objectsListAmount || 100,
+          spritesListAmount: settingsData.spritesListAmount || 100,
+          autosaveThingChanges: settingsData.autosaveThingChanges || false,
+        });
+      }
+    };
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(settings);
+    worker.onCommand(handleCommand);
+    
+    // Request current settings (if available)
+    // Note: This might not work if there's no GetSettingsCommand
+    // Settings will be loaded when backend sends them
+  }, [open, worker]);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Create settings object matching ObjectBuilderSettings structure
+      const settingsData = {
+        objectsListAmount: settings.objectsListAmount,
+        spritesListAmount: settings.spritesListAmount,
+        autosaveThingChanges: settings.autosaveThingChanges,
+      };
+
+      // Send settings to backend via SettingsCommand
+      const command = CommandFactory.createSettingsCommand(settingsData);
+      const result = await worker.sendCommand(command);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save settings');
+      }
+      
+      if (onSave) {
+        onSave(settingsData);
+      }
+      
+      showSuccess('Preferences saved');
+      onClose();
+    } catch (error: any) {
+      showError(error.message || 'Failed to save preferences');
+    } finally {
+      setLoading(false);
     }
-    onClose();
   };
 
   const handleChange = (key: string, value: any) => {
@@ -51,7 +97,9 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? 'Saving...' : 'Save'}
+          </Button>
         </>
       }
     >

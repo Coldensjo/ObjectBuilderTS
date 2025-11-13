@@ -57,12 +57,21 @@ See [DOCUMENTATION.md](./DOCUMENTATION.md) for complete documentation index.
 - Window state management
 - Menu bar with shortcuts
 
-## ⏳ Remaining Work (~5%)
+## ⏳ Remaining Work (~3%)
 
 - Animation support (partially implemented)
+- Load versions list in LoadFilesDialog
 - Canvas module rebuild for Electron (`npm run rebuild`)
 - Testing suite
 - Performance optimization
+
+## ✅ Recent UI Improvements
+
+- FindDialog navigates to selected thing when clicked
+- PreferencesDialog saves settings to backend
+- All components properly connected to backend
+- Category changes automatically reload thing lists
+- ExportDialog shows selected item count
 
 ## 🛠️ Technology Stack
 

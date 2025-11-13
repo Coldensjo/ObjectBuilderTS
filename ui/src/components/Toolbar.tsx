@@ -187,7 +187,8 @@ export const Toolbar: React.FC = () => {
 
   const handleCategoryChange = (category: string) => {
     setCategory(category);
-    // TODO: Load thing list for category
+    // ThingList component will automatically reload when category changes
+    // via its useEffect hook that watches currentCategory
   };
 
   return (
