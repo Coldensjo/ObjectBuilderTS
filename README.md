@@ -328,11 +328,12 @@ TypeScript conversion by [Your Name/Team].
 ## 🔗 Links
 
 - [Original Repository](https://github.com/ottools/ObjectBuilder)
-- [Documentation Index](./DOCUMENTATION.md) - All documentation files
-- [Development Guide](./DEVELOPMENT.md) - Development setup
-- [Architecture](./ARCHITECTURE.md) - System architecture
-- [Current Status](./CURRENT_STATUS.md) - Detailed status
-- [Project Status](./PROJECT_STATUS.md) - Overall progress
+- **[📚 Documentation](./docs/README.md)** - **⚠️ READ ALL DOCS BEFORE WORKING** - Complete documentation guide
+- [Documentation Index](./docs/DOCUMENTATION.md) - All documentation files
+- [Development Guide](./docs/DEVELOPMENT.md) - Development setup
+- [Architecture](./docs/ARCHITECTURE.md) - System architecture
+- [Current Status](./docs/CURRENT_STATUS.md) - Detailed status
+- [Project Status](./docs/PROJECT_STATUS.md) - Overall progress
 
 ## 🚧 Roadmap
 
