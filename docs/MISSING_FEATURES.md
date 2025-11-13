@@ -13,13 +13,13 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 
 ### Core Windows
 - ❌ **Animation Editor** (`AnimationEditor`) - Advanced animation frame editing tool
-- ❌ **Object Viewer** (`ObjectViewer`) - Standalone window to view .obd files
+- ✅ **Object Viewer** (`ObjectViewer`) - Standalone window to view .obd files
 - ❌ **Slicer** (`Slicer`) - Tool to slice sprite sheets into individual sprites
 - ❌ **Asset Store** (`AssetStore`) - Browse and import assets from online store
 - ❌ **Look Generator** (`LookGenerator`) - Generate character looks/outfits
 - ❌ **Client Versions Window** (`ClientVersionsWindow`) - Manage client version definitions
 - ❌ **Import Thing Window** (`ImportThingWindow`) - Advanced import dialog with preview
-- ❌ **Files Info Panel** (`FilesInfoPanel`) - Display file information and statistics
+- ✅ **Files Info Panel** (`FilesInfoPanel`) - Display file information and statistics
 
 ### Optimizer Windows
 - ❌ **Sprites Optimizer Window** (`SpritesOptimizerWindow`) - Optimize sprite storage
@@ -28,7 +28,7 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 
 ### Advanced Dialogs
 - 🟡 **Export Window** (`ExportWindow`) - More advanced export options (partially implemented)
-- 🟡 **Preferences Window** - Missing hotkey editor section
+- ✅ **Preferences Window** - Implemented (includes hotkey editor)
 - ✅ **About Dialog** - Implemented
 - ✅ **Find Dialog** - Implemented
 - ✅ **Load Files Dialog** - Implemented (with versions list)
@@ -40,20 +40,21 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 
 ## ⌨️ Hotkey System
 
-- ❌ **Hotkey Manager** - Global keyboard shortcut system
-- ❌ **Hotkey Registration** - Register actions with default shortcuts
-- ❌ **Hotkey Editor** - UI to customize keyboard shortcuts
-- ❌ **Hotkey Persistence** - Save/load hotkey configurations
-- ❌ **Hotkey Tooltips** - Show shortcuts in tooltips
-- ❌ **Hotkey Actions** - All action definitions (FILE_NEW, FILE_OPEN, etc.)
+- ✅ **Hotkey Manager** - Global keyboard shortcut system
+- ✅ **Hotkey Registration** - Register actions with default shortcuts
+- ✅ **Hotkey Editor** - UI to customize keyboard shortcuts (in Preferences)
+- ✅ **Hotkey Persistence** - Save/load hotkey configurations
+- 🟡 **Hotkey Tooltips** - Show shortcuts in tooltips (partially implemented)
+- ✅ **Hotkey Actions** - All action definitions (FILE_NEW, FILE_OPEN, etc.)
 
-**Missing Hotkey Actions:**
-- File operations (New, Open, Save, Compile, etc.)
-- Edit operations (Undo, Redo, Cut, Copy, Paste)
-- View operations (Toggle panels, Zoom, etc.)
-- Thing operations (New, Duplicate, Remove, etc.)
-- Sprite operations (New, Import, Export, etc.)
-- Tools (Find, Animation Editor, Object Viewer, etc.)
+**Implemented Hotkey Actions:**
+- ✅ File operations (New, Open, Save, Compile, Compile As, Import, Export, Merge, Unload)
+- ✅ Edit operations (Undo, Redo, Cut, Copy, Paste, Duplicate, Delete)
+- ✅ View operations (Toggle panels, Zoom, File Info)
+- ✅ Thing operations (New, Duplicate, Remove)
+- ✅ Sprite operations (New, Import, Export, Remove)
+- ✅ Tools (Find, Animation Editor, Object Viewer, Slicer, Asset Store)
+- ✅ Window operations (Preferences, Log, About)
 
 ---
 
@@ -109,9 +110,9 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 ## 🔧 Tools & Utilities
 
 ### File Operations
-- ❌ **Unload Project** - Confirmation dialog before unloading
-- ❌ **Compile As** - Save project with different name/location
-- ❌ **Auto-save thing changes** - Automatically save on compile
+- ✅ **Unload Project** - Confirmation dialog before unloading
+- ✅ **Compile As** - Save project with different name/location
+- ✅ **Auto-save thing changes** - Automatically save on compile
 - ❌ **Recent files list** - Show recently opened projects
 - ❌ **File change detection** - Warn if files changed externally
 
@@ -162,12 +163,12 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 
 ### Settings
 - 🟡 **Settings Management** - Basic settings, missing:
-  - ❌ Hotkey configuration
+  - ✅ Hotkey configuration
   - ❌ Window state (size, position, panel visibility)
   - ❌ Recent files list
   - ❌ Export templates
   - ❌ UI preferences (theme, font size, etc.)
-  - ❌ Advanced file operation settings
+  - ✅ Advanced file operation settings (autosave thing changes)
 
 ### State Persistence
 - ❌ **Window state persistence** - Save window size/position (partially done)
@@ -305,13 +306,13 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 ## 🎯 Priority Features to Implement
 
 ### High Priority
-1. **Hotkey System** - Essential for power users
+1. ✅ **Hotkey System** - Essential for power users
 2. **Animation Editor** - Core feature for animation work
-3. **Object Viewer** - Useful standalone tool
+3. ✅ **Object Viewer** - Useful standalone tool
 4. **Sprites Optimizer** - Performance improvement tool
-5. **Unload Project Confirmation** - Prevent data loss
-6. **Compile As** - Essential file operation
-7. **Auto-save thing changes** - Prevent data loss
+5. ✅ **Unload Project Confirmation** - Prevent data loss
+6. ✅ **Compile As** - Essential file operation
+7. ✅ **Auto-save thing changes** - Prevent data loss
 
 ### Medium Priority
 8. **Slicer** - Useful sprite tool
@@ -333,17 +334,24 @@ This document lists all features from the original ActionScript/Adobe AIR versio
 
 ## 📊 Implementation Progress
 
-**Overall Completion: ~75%**
+**Overall Completion: ~78%**
 
 - **Backend**: 100% ✅
 - **Core UI**: 90% ✅
-- **Dialogs**: 60% 🟡
+- **Dialogs**: 70% 🟡
 - **Tools**: 20% ❌
-- **Hotkeys**: 0% ❌
-- **Advanced Features**: 30% 🟡
+- **Hotkeys**: 95% ✅
+- **Advanced Features**: 35% 🟡
 
 ---
 
 *Last Updated: Current Session*
-*Total Missing Features: ~100+ individual features/components*
+*Total Missing Features: ~95+ individual features/components*
+
+### Recent Updates
+- ✅ Implemented complete Hotkey System (Manager, Registration, Editor, Persistence)
+- ✅ Implemented Auto-save thing changes feature
+- ✅ Verified Unload Project Confirmation and Compile As are implemented
+- ✅ Verified Object Viewer and Files Info Panel are implemented
+- ✅ Updated Preferences Window with hotkey editor
 
