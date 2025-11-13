@@ -33,9 +33,55 @@ export const SpriteList: React.FC = () => {
 
   // Load sprite list when thing is selected
   useEffect(() => {
-    // TODO: Load sprites for selected thing
-    // For now, this is a placeholder
-  }, []);
+    const handleCommand = (command: any) => {
+      if (command.type === 'SetThingDataCommand') {
+        // Extract sprite IDs from thing data
+        const thingData = command.data;
+        if (thingData && thingData.sprites) {
+          // Get sprites from the DEFAULT frame group (or first available)
+          let spriteIds: number[] = [];
+          
+          // Try to get sprites from frame groups
+          if (thingData.sprites instanceof Map) {
+            // If it's a Map, get sprites from DEFAULT frame group (0)
+            const defaultSprites = thingData.sprites.get(0) || [];
+            spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
+          } else if (Array.isArray(thingData.sprites)) {
+            // If it's an array, use it directly
+            spriteIds = thingData.sprites.map((s: any) => s.id).filter((id: number) => id > 0);
+          } else if (thingData.sprites[0]) {
+            // If it's an object with numeric keys
+            const defaultSprites = thingData.sprites[0] || [];
+            spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
+          }
+          
+          // Load sprite list with first sprite ID if available
+          if (spriteIds.length > 0) {
+            loadSpriteList(spriteIds[0]);
+          } else {
+            setSprites([]);
+            setLoading(false);
+          }
+        } else {
+          setSprites([]);
+          setLoading(false);
+        }
+      }
+    };
+
+    worker.onCommand(handleCommand);
+  }, [worker]);
+
+  const loadSpriteList = async (targetId: number) => {
+    setLoading(true);
+    try {
+      const command = CommandFactory.createGetSpriteListCommand(targetId);
+      await worker.sendCommand(command);
+    } catch (error) {
+      console.error('Failed to load sprite list:', error);
+      setLoading(false);
+    }
+  };
 
   const handleSpriteClick = (id: number) => {
     setSelectedSpriteIds([id]);

@@ -140,3 +140,32 @@
   user-select: none;
 }
 
+.export-info {
+  padding: 0.75rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.export-info p {
+  margin: 0;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.export-warning {
+  padding: 0.75rem;
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.export-warning p {
+  margin: 0;
+  color: #ffc107;
+}
+

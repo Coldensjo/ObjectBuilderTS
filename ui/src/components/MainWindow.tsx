@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useWorker } from '../contexts/WorkerContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { useToast } from '../hooks/useToast';
+import { useAppStateContext } from '../contexts/AppStateContext';
 import { Toolbar } from './Toolbar';
 import { PreviewPanel } from './PreviewPanel';
 import { ThingsPanel } from './ThingsPanel';
@@ -22,6 +23,7 @@ const MainWindowContent: React.FC = () => {
   const worker = useWorker();
   const { showProgress, hideProgress } = useProgress();
   const { showSuccess, showError } = useToast();
+  const { selectedThingIds, selectedSpriteIds, currentCategory } = useAppStateContext();
   const [showPreviewPanel, setShowPreviewPanel] = useState(true);
   const [showThingsPanel, setShowThingsPanel] = useState(true);
   const [showSpritesPanel, setShowSpritesPanel] = useState(true);
@@ -31,6 +33,7 @@ const MainWindowContent: React.FC = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [exportType, setExportType] = useState<'things' | 'sprites'>('things');
 
   // Listen for menu actions
   useEffect(() => {
@@ -58,6 +61,12 @@ const MainWindowContent: React.FC = () => {
           setShowImportDialog(true);
           break;
         case 'file-export':
+          // Determine export type based on what's selected
+          if (selectedThingIds.length > 0) {
+            setExportType('things');
+          } else if (selectedSpriteIds.length > 0) {
+            setExportType('sprites');
+          }
           setShowExportDialog(true);
           break;
         case 'file-merge':
@@ -158,15 +167,21 @@ const MainWindowContent: React.FC = () => {
       <ExportDialog
         open={showExportDialog}
         onClose={() => setShowExportDialog(false)}
+        exportType={exportType}
+        selectedIds={exportType === 'things' ? selectedThingIds : selectedSpriteIds}
         onExport={async (options) => {
           try {
             showProgress(`Exporting ${options.type}...`);
             if (options.type === 'things') {
               // Export things to OBD file
-              // TODO: Get selectedIds from app state or ThingList
-              const selectedIds: number[] = []; // Placeholder - should come from selected things
+              const ids = selectedThingIds.length > 0 ? selectedThingIds : [];
+              if (ids.length === 0) {
+                showError('Please select at least one thing to export');
+                hideProgress();
+                return;
+              }
               const command = CommandFactory.createExportThingCommand(
-                selectedIds,
+                ids,
                 options.outputPath,
                 options.obdVersion,
                 options.spriteSheetFlag
@@ -174,16 +189,20 @@ const MainWindowContent: React.FC = () => {
               const result = await worker.sendCommand(command);
               hideProgress();
               if (result.success) {
-                showSuccess('Successfully exported things');
+                showSuccess(`Successfully exported ${ids.length} thing(s)`);
               } else {
                 showError(result.error || 'Failed to export things');
               }
             } else {
               // Export sprites to image file
-              // TODO: Get selectedIds from app state or SpriteList
-              const selectedIds: number[] = []; // Placeholder - should come from selected sprites
+              const ids = selectedSpriteIds.length > 0 ? selectedSpriteIds : [];
+              if (ids.length === 0) {
+                showError('Please select at least one sprite to export');
+                hideProgress();
+                return;
+              }
               const command = CommandFactory.createExportSpritesCommand(
-                selectedIds,
+                ids,
                 options.outputPath,
                 options.format,
                 options.transparentBackground,
@@ -192,7 +211,7 @@ const MainWindowContent: React.FC = () => {
               const result = await worker.sendCommand(command);
               hideProgress();
               if (result.success) {
-                showSuccess('Successfully exported sprites');
+                showSuccess(`Successfully exported ${ids.length} sprite(s)`);
               } else {
                 showError(result.error || 'Failed to export sprites');
               }

@@ -159,7 +159,20 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     }
 
     // Get sprites for this frame group
-    const groupSprites = thingData.sprites?.get?.(groupType) || thingData.sprites?.[groupType] || [];
+    let groupSprites: any[] = [];
+    if (thingData.sprites) {
+      if (thingData.sprites instanceof Map) {
+        // If it's a Map, get sprites for the frame group type
+        groupSprites = thingData.sprites.get(groupType) || [];
+      } else if (Array.isArray(thingData.sprites)) {
+        // If it's an array, use it directly (legacy format)
+        groupSprites = thingData.sprites;
+      } else if (typeof thingData.sprites === 'object') {
+        // If it's an object with numeric keys
+        groupSprites = thingData.sprites[groupType] || thingData.sprites[0] || [];
+      }
+    }
+    
     if (!groupSprites || groupSprites.length === 0) {
       renderPlaceholder(ctx, canvasWidth, canvasHeight);
       return;
@@ -232,13 +245,27 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
           // Check if spriteIndex is valid and within bounds
           if (spriteIndex >= 0 && spriteIndex < sprites.length) {
             const spriteData = sprites[spriteIndex];
-            if (spriteData && spriteData.pixels) {
-              // Calculate position (sprites are drawn bottom-to-top, right-to-left)
-              // In Tibia, sprites are positioned from bottom-right
-              const x = offsetX + (width - w - 1) * spriteSize;
-              const y = offsetY + (height - h - 1) * spriteSize;
+            if (spriteData) {
+              // Handle different sprite data structures
+              let pixels: Uint8Array | ArrayBuffer | Buffer | null = null;
               
-              renderSpritePixelsAt(ctx, spriteData.pixels, x, y, spriteSize);
+              if (spriteData.pixels) {
+                pixels = spriteData.pixels;
+              } else if (spriteData instanceof Uint8Array || spriteData instanceof ArrayBuffer || Buffer.isBuffer(spriteData)) {
+                pixels = spriteData;
+              } else if (Array.isArray(spriteData)) {
+                // If it's an array, try to use it as pixel data
+                pixels = new Uint8Array(spriteData);
+              }
+              
+              if (pixels) {
+                // Calculate position (sprites are drawn bottom-to-top, right-to-left)
+                // In Tibia, sprites are positioned from bottom-right
+                const x = offsetX + (width - w - 1) * spriteSize;
+                const y = offsetY + (height - h - 1) * spriteSize;
+                
+                renderSpritePixelsAt(ctx, pixels, x, y, spriteSize);
+              }
             }
           }
         }

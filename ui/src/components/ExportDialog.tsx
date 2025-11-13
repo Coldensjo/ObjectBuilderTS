@@ -120,6 +120,15 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       }
     >
       <div className="export-content">
+        {selectedIds.length > 0 ? (
+          <div className="export-info">
+            <p>{selectedIds.length} {type === 'things' ? 'thing(s)' : 'sprite(s)'} selected</p>
+          </div>
+        ) : (
+          <div className="export-warning">
+            <p>No {type === 'things' ? 'things' : 'sprites'} selected. Please select items to export.</p>
+          </div>
+        )}
         <div className="export-section">
           <h4>Export Type</h4>
           <div className="export-type-options">

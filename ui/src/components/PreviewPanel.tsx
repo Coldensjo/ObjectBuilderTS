@@ -34,6 +34,12 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
     worker.onCommand(handleCommand);
   }, [worker]);
 
+  // Get available frame groups
+  const frameGroups = thingData?.thing?.frameGroups || [];
+  const availableFrameGroups: { type: number; name: string }[] = [];
+  if (frameGroups[0]) availableFrameGroups.push({ type: 0, name: 'Default' });
+  if (frameGroups[1]) availableFrameGroups.push({ type: 1, name: 'Walking' });
+
   // Check if thing has animation
   const hasAnimation = thingData?.thing?.frameGroups?.[frameGroupType]?.isAnimation || false;
   const frameGroup = thingData?.thing?.frameGroups?.[frameGroupType];
@@ -59,6 +65,28 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                 animate={animate}
               />
               <div className="preview-controls">
+                {availableFrameGroups.length > 1 && (
+                  <div className="preview-control-group">
+                    <label>Frame Group:</label>
+                    <select
+                      value={frameGroupType}
+                      onChange={(e) => {
+                        const newType = parseInt(e.target.value);
+                        setFrameGroupType(newType);
+                        // Reset patterns when switching frame groups
+                        setPatternX(0);
+                        setPatternY(0);
+                        setPatternZ(0);
+                      }}
+                    >
+                      {availableFrameGroups.map((fg) => (
+                        <option key={fg.type} value={fg.type}>
+                          {fg.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 {frameGroup && (
                   <>
                     {frameGroup.patternX > 1 && (
