@@ -1,8 +1,8 @@
-# Ironcore Object Builder - TypeScript Version
+# ObjectBuilder - TypeScript Version
 
 > **Status**: ~93% Complete | Backend: 100% ✅ | UI: 93% ✅
 
-A complete TypeScript conversion of the Adobe AIR/Flash-based Object Builder application for Open Tibia client file editing.
+A complete TypeScript conversion of the Adobe AIR/Flash-based ObjectBuilder application for OpenTibia object editing.
 
 **Built with**: TypeScript, React, Electron, Node.js
 
@@ -322,8 +322,8 @@ MIT License - See LICENSE file for details
 
 ## 🙏 Credits
 
-Original ActionScript/AIR version by the Object Builder team.
-TypeScript conversion by [Your Name/Team].
+Original ActionScript/AIR version by https://github.com/Mignari.
+TypeScript conversion by ChatGPT and Siz.
 
 ## 🔗 Links
 
