@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "actionscript",
+      "debug": false,
+      "air": "windows",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "Adobe AIR: package Windows release (captive runtime) - asconfig.json"
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "label": "npm: build",
+      "detail": "npm run build:backend && npm run build:ui && npm run build:electron"
+    }
+  ]
+}
