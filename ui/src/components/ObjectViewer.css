@@ -1,0 +1,196 @@
+.object-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #494949;
+  color: #ffffff;
+  font-size: 11px;
+}
+
+.object-viewer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 35px;
+  padding: 0 10px;
+  background-color: #494949;
+  border-bottom: 1px solid #272727;
+  border-top: 1px solid #636363;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.background-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.background-control input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.color-picker {
+  width: 30px;
+  height: 20px;
+  border: 1px solid #636363;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+}
+
+.object-viewer-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.object-viewer-file-list {
+  width: 250px;
+  border-right: 1px solid #272727;
+  overflow-y: auto;
+  background-color: #3a3a3a;
+}
+
+.file-list-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-list-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #272727;
+  transition: background-color 0.1s;
+}
+
+.file-list-item:hover {
+  background-color: #4a4a4a;
+}
+
+.file-list-item.selected {
+  background-color: #5a5a5a;
+}
+
+.file-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list-empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
+
+.object-viewer-preview {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  background-color: #494949;
+  position: relative;
+}
+
+.preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.1s;
+}
+
+.preview-placeholder {
+  color: #888;
+  font-size: 14px;
+}
+
+.object-viewer-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid #272727;
+  background-color: #494949;
+}
+
+.object-viewer-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 10px;
+  background-color: #3a3a3a;
+  border-top: 1px solid #272727;
+}
+
+.status-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.zoom-slider {
+  width: 100px;
+  cursor: pointer;
+}
+
+.zoom-value {
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Scrollbar styling */
+.object-viewer-file-list::-webkit-scrollbar,
+.object-viewer-preview::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.object-viewer-file-list::-webkit-scrollbar-track,
+.object-viewer-preview::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+.object-viewer-file-list::-webkit-scrollbar-thumb,
+.object-viewer-preview::-webkit-scrollbar-thumb {
+  background: #5a5a5a;
+  border-radius: 6px;
+}
+
+.object-viewer-file-list::-webkit-scrollbar-thumb:hover,
+.object-viewer-preview::-webkit-scrollbar-thumb:hover {
+  background: #6a6a6a;
+}
+

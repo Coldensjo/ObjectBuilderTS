@@ -90,8 +90,25 @@ export class Sprite {
             return null;
         }
 
+        // Pixels returned by getPixels() are in ARGB format (A, R, G, B)
+        // Canvas ImageData expects RGBA (R, G, B, A), so convert before setting
+        const argb = pixels.toBuffer();
+        const rgba = Buffer.alloc(argb.length);
+        const pixelCount = argb.length / 4;
+        for (let i = 0; i < pixelCount; i++) {
+            const ai = i * 4;
+            const ri = ai + 1;
+            const gi = ai + 2;
+            const bi = ai + 3;
+            const di = i * 4;
+            rgba[di] = argb[ri] || 0;       // R
+            rgba[di + 1] = argb[gi] || 0;   // G
+            rgba[di + 2] = argb[bi] || 0;   // B
+            rgba[di + 3] = argb[ai] ?? 255; // A
+        }
+
         this._bitmap = new BitmapData(SpriteExtent.DEFAULT_SIZE, SpriteExtent.DEFAULT_SIZE, true);
-        this._bitmap.setPixels(this._rect, pixels.toBuffer());
+        this._bitmap.setPixels(this._rect, rgba);
 
         return this._bitmap;
     }

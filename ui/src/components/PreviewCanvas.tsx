@@ -195,7 +195,9 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     }
 
     // Render multi-sprite composition
-    renderFrameGroup(ctx, frameGroup, groupSprites, canvasWidth, canvasHeight, px, py, pz, frame);
+    // Show all patterns if patternX > 1 or patternY > 1
+    const showAllPatterns = (frameGroup.patternX > 1 || frameGroup.patternY > 1);
+    renderFrameGroup(ctx, frameGroup, groupSprites, canvasWidth, canvasHeight, px, py, pz, frame, showAllPatterns);
   };
 
   const renderFrameGroup = (
@@ -207,7 +209,8 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     px: number,
     py: number,
     pz: number,
-    frame: number
+    frame: number,
+    showAllPatterns: boolean = false
   ) => {
     const spriteSize = frameGroup.exactSize || 32;
     const layers = frameGroup.layers || 1;
@@ -215,6 +218,45 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     const patternY = frameGroup.patternY || 1;
     const patternZ = frameGroup.patternZ || 1;
     const frames = frameGroup.frames || 1;
+
+    // If showing all patterns, render a grid of patternX x patternY
+    if (showAllPatterns && (patternX > 1 || patternY > 1)) {
+      const gridCols = patternX;
+      const gridRows = patternY;
+      const width = frameGroup.width || 1;
+      const height = frameGroup.height || 1;
+      const cellWidth = width * spriteSize;
+      const cellHeight = height * spriteSize;
+      const gridWidth = gridCols * cellWidth;
+      const gridHeight = gridRows * cellHeight;
+      
+      // Scale to fit canvas
+      const scaleX = canvasWidth / gridWidth;
+      const scaleY = canvasHeight / gridHeight;
+      const scale = Math.min(scaleX, scaleY, 1); // Don't scale up
+      
+      const scaledCellWidth = cellWidth * scale;
+      const scaledCellHeight = cellHeight * scale;
+      const scaledSpriteSize = spriteSize * scale;
+      
+      const startX = (canvasWidth - gridWidth * scale) / 2;
+      const startY = (canvasHeight - gridHeight * scale) / 2;
+      
+      for (let pyIdx = 0; pyIdx < gridRows; pyIdx++) {
+        for (let pxIdx = 0; pxIdx < gridCols; pxIdx++) {
+          const cellX = startX + pxIdx * scaledCellWidth;
+          const cellY = startY + pyIdx * scaledCellHeight;
+          
+          // Render this pattern variation
+          ctx.save();
+          ctx.translate(cellX, cellY);
+          ctx.scale(scale, scale);
+          renderSinglePattern(ctx, frameGroup, sprites, cellWidth, cellHeight, pxIdx, pyIdx, pz, frame);
+          ctx.restore();
+        }
+      }
+      return;
+    }
 
     // Clamp pattern values
     const pxClamped = Math.max(0, Math.min(px, patternX - 1));
@@ -231,6 +273,27 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
     // Center the composition on canvas
     const offsetX = (canvasWidth - totalWidth) / 2;
     const offsetY = (canvasHeight - totalHeight) / 2;
+    
+    renderSinglePattern(ctx, frameGroup, sprites, totalWidth, totalHeight, pxClamped, pyClamped, pzClamped, frameClamped, offsetX, offsetY);
+  };
+
+  const renderSinglePattern = (
+    ctx: CanvasRenderingContext2D,
+    frameGroup: any,
+    sprites: any[],
+    totalWidth: number,
+    totalHeight: number,
+    px: number,
+    py: number,
+    pz: number,
+    frame: number,
+    offsetX: number = 0,
+    offsetY: number = 0
+  ) => {
+    const spriteSize = frameGroup.exactSize || 32;
+    const layers = frameGroup.layers || 1;
+    const width = frameGroup.width || 1;
+    const height = frameGroup.height || 1;
 
     // Helper function to calculate sprite index using FrameGroup formula
     const getSpriteIndex = (w: number, h: number, l: number, px: number, py: number, pz: number, f: number): number => {
@@ -238,7 +301,10 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
         return frameGroup.getSpriteIndex(w, h, l, px, py, pz, f);
       }
       // Fallback calculation using the same formula as FrameGroup.getSpriteIndex
-      // Formula: ((((((frame % frames) * patternZ + patternZ) * patternY + patternY) * patternX + patternX) * layers + layer) * height + height) * width + width
+      const frames = frameGroup.frames || 1;
+      const patternX = frameGroup.patternX || 1;
+      const patternY = frameGroup.patternY || 1;
+      const patternZ = frameGroup.patternZ || 1;
       const frameMod = f % frames;
       const step1 = frameMod * patternZ + pz;
       const step2 = step1 * patternY + py;
@@ -256,7 +322,7 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
       for (let w = 0; w < width; w++) {
         for (let h = 0; h < height; h++) {
           // Get sprite index using FrameGroup formula
-          const spriteIndex = getSpriteIndex(w, h, l, pxClamped, pyClamped, pzClamped, frameClamped);
+          const spriteIndex = getSpriteIndex(w, h, l, px, py, pz, frame);
           
           // Check if spriteIndex is valid and within bounds
           if (spriteIndex >= 0 && spriteIndex < sprites.length) {
@@ -319,15 +385,18 @@ export const PreviewCanvas: React.FC<PreviewCanvasProps> = ({
       const imageData = ctx.createImageData(size, size);
       const data = imageData.data;
 
-      // Convert RGBA pixels to ImageData
+      // Convert ARGB pixels to RGBA ImageData
+      // Tibia sprites use ARGB format (Alpha, Red, Green, Blue), not RGBA
       const pixelCount = size * size;
-      for (let i = 0; i < pixelCount * 4 && i < pixelData.length; i += 4) {
-        const idx = i / 4;
-        if (idx < data.length / 4) {
-          data[i] = pixelData[i] || 0;         // R
-          data[i + 1] = pixelData[i + 1] || 0; // G
-          data[i + 2] = pixelData[i + 2] || 0; // B
-          data[i + 3] = pixelData[i + 3] ?? 255; // A (default to opaque if missing)
+      for (let i = 0; i < pixelCount; i++) {
+        const argbIndex = i * 4;
+        const rgbaIndex = i * 4;
+        if (argbIndex + 3 < pixelData.length && rgbaIndex + 3 < data.length) {
+          // Convert from ARGB to RGBA for canvas ImageData
+          data[rgbaIndex] = pixelData[argbIndex + 1] || 0;     // R (from ARGB position 1)
+          data[rgbaIndex + 1] = pixelData[argbIndex + 2] || 0; // G (from ARGB position 2)
+          data[rgbaIndex + 2] = pixelData[argbIndex + 3] || 0; // B (from ARGB position 3)
+          data[rgbaIndex + 3] = pixelData[argbIndex] ?? 255;   // A (from ARGB position 0)
         }
       }
 

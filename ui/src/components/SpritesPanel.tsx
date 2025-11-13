@@ -10,7 +10,7 @@ interface SpritesPanelProps {
 export const SpritesPanel: React.FC<SpritesPanelProps> = ({ onClose }) => {
   return (
     <Panel
-      title="Sprites"
+      title="Sprites Panel"
       className="sprites-panel"
       onClose={onClose}
       collapsible={true}

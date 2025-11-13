@@ -31,15 +31,16 @@ function loadWindowState(): WindowState {
     height: 768,
   };
 
-  try {
-    if (fs.existsSync(WINDOW_STATE_FILE)) {
-      const data = fs.readFileSync(WINDOW_STATE_FILE, 'utf-8');
-      const state = JSON.parse(data);
-      return { ...defaultState, ...state };
+    try {
+      if (fs.existsSync(WINDOW_STATE_FILE)) {
+        const data = fs.readFileSync(WINDOW_STATE_FILE, 'utf-8');
+        const state = JSON.parse(data);
+        return { ...defaultState, ...state };
+      }
+    } catch (error: any) {
+      sendLogCommand(6, `Failed to load window state: ${error.message}`, error.stack, 'Window:loadState');
+      console.error('Failed to load window state:', error);
     }
-  } catch (error) {
-    console.error('Failed to load window state:', error);
-  }
 
   return defaultState;
 }
@@ -58,7 +59,8 @@ function saveWindowState(): void {
     };
 
     fs.writeFileSync(WINDOW_STATE_FILE, JSON.stringify(state, null, 2));
-  } catch (error) {
+  } catch (error: any) {
+    sendLogCommand(6, `Failed to save window state: ${error.message}`, error.stack, 'Window:saveState');
     console.error('Failed to save window state:', error);
   }
 }
@@ -109,6 +111,7 @@ function createWindow(): void {
     }
     
     mainWindow.loadFile(uiPath).catch((error: Error) => {
+      sendLogCommand(8, `Failed to load UI file: ${error.message}`, error.stack, 'Window:loadFile');
       console.error('Failed to load UI file:', error);
     });
   }
@@ -158,6 +161,21 @@ function createWindow(): void {
   });
 }
 
+// Helper function to send log commands to renderer
+function sendLogCommand(level: number, message: string, stack?: string, source?: string): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const serializedCommand = {
+      type: 'LogCommand',
+      level,
+      message,
+      stack,
+      source,
+      timestamp: Date.now()
+    };
+    mainWindow.webContents.send('worker:command', serializedCommand);
+  }
+}
+
 // Serialize command data for IPC transmission
 // Converts ByteArray/Buffer objects to ArrayBuffer for proper serialization
 function serializeCommand(command: WorkerCommand): any {
@@ -193,6 +211,29 @@ function serializeCommand(command: WorkerCommand): any {
         otbVersion: version.otbVersion,
       })),
     };
+  } else if (commandName === 'LogCommand') {
+    // Handle LogCommand specially - it should be sent directly without data wrapper
+    const cmd = command as any;
+    serialized.level = cmd.level;
+    serialized.message = cmd.message;
+    serialized.stack = cmd.stack;
+    serialized.source = cmd.source;
+    serialized.timestamp = cmd.timestamp || Date.now();
+    // Don't wrap in data for LogCommand
+    return serialized;
+  } else if (commandName === 'ProgressCommand') {
+    // Handle ProgressCommand - forward directly without processing
+    const cmd = command as any;
+    serialized.id = cmd.id;
+    serialized.value = cmd.value;
+    serialized.total = cmd.total;
+    serialized.label = cmd.label || '';
+    // Don't wrap in data for ProgressCommand
+    return serialized;
+  } else if (commandName === 'SetClientInfoCommand') {
+    // Handle SetClientInfoCommand
+    const cmd = command as any;
+    serialized.data = serializeObject(cmd.info || cmd.clientInfo || {});
   } else {
     // For other commands, serialize all properties
     serialized.data = serializeObject(command);
@@ -377,8 +418,20 @@ function serializeObject(obj: any): any {
 function setupIpcHandlers(): void {
   // Send command to backend
   ipcMain.handle('worker:sendCommand', async (event, commandData: any) => {
+    console.log('[IPC] Received command:', commandData.type, commandData);
+    
+    // LogCommand should NOT be sent to backend - it's only sent FROM backend TO UI
+    // If we receive a LogCommand here, it's likely a loop - ignore it
+    if (commandData.type === 'LogCommand') {
+      console.warn('[IPC] Ignoring LogCommand - should not be sent from UI to backend');
+      return { success: true }; // Silently ignore to prevent loops
+    }
+    
     if (!backendApp || !(backendApp as any).communicator) {
-      return { success: false, error: 'Backend not initialized. Please check console for errors.' };
+      const errorMsg = 'Backend not initialized. Please check console for errors.';
+      sendLogCommand(8, errorMsg, undefined, 'IPC:worker:sendCommand');
+      console.error('[IPC] Backend not initialized');
+      return { success: false, error: errorMsg };
     }
 
     try {
@@ -386,7 +439,11 @@ function setupIpcHandlers(): void {
       // The WorkerCommunicator will handle routing based on command type
       const CommandClass = getCommandClass(commandData.type);
       if (!CommandClass) {
-        return { success: false, error: `Unknown command type: ${commandData.type}` };
+        const errorMsg = `Unknown command type: ${commandData.type}`;
+        // Don't send LogCommand for unknown commands to prevent loops
+        // Just log to console instead
+        console.error('[IPC] Unknown command type:', commandData.type);
+        return { success: false, error: errorMsg };
       }
 
       // Create command instance from data
@@ -403,16 +460,63 @@ function setupIpcHandlers(): void {
           return new PathHelper(item.nativePath || item.path, item.id || 0);
         });
         command = new CommandClass(pathHelpers);
+      } else if (commandData.type === 'LoadFilesCommand') {
+        // LoadFilesCommand needs: datFile, sprFile, version, extended, transparency, improvedAnimations, frameGroups
+        console.log('[IPC] Creating LoadFilesCommand with:', {
+          datFile: commandData.datFile,
+          sprFile: commandData.sprFile,
+          version: commandData.version,
+          extended: commandData.extended,
+          transparency: commandData.transparency,
+          improvedAnimations: commandData.improvedAnimations,
+          frameGroups: commandData.frameGroups,
+        });
+        
+        // Version object needs to be properly constructed
+        // Version can be null for auto-detect
+        const Version = require(path.join(__dirname, '../../otlib/core/Version')).Version;
+        let versionObj = commandData.version;
+        
+        // If version is provided and is a plain object, convert it to Version instance
+        if (versionObj && typeof versionObj === 'object' && !(versionObj instanceof Version)) {
+          versionObj = new Version();
+          versionObj.value = commandData.version.value;
+          versionObj.valueStr = commandData.version.valueStr;
+          versionObj.datSignature = commandData.version.datSignature;
+          versionObj.sprSignature = commandData.version.sprSignature;
+          versionObj.otbVersion = commandData.version.otbVersion;
+        }
+        // If version is null/undefined, pass null (backend will auto-detect)
+        
+        command = new CommandClass(
+          commandData.datFile,
+          commandData.sprFile,
+          versionObj || null, // Allow null for auto-detect
+          commandData.extended,
+          commandData.transparency,
+          commandData.improvedAnimations,
+          commandData.frameGroups
+        );
+      } else if (commandData.type === 'GetVersionsListCommand') {
+        // GetVersionsListCommand takes no parameters
+        command = new CommandClass();
       } else {
         // For other commands, use the original approach
-        command = new CommandClass(...Object.values(commandData).filter((_, i) => i !== 0));
+        const args = Object.values(commandData).filter((_, i) => i !== 0);
+        console.log('[IPC] Creating command with args:', args);
+        command = new CommandClass(...args);
       }
       
+      console.log('[IPC] Command created, handling...');
       (backendApp as any).communicator.handleCommand(command);
+      console.log('[IPC] Command handled, returning success');
       
       return { success: true };
     } catch (error: any) {
-      console.error('Error handling command:', error);
+      const errorMsg = `Error handling command ${commandData.type}: ${error.message}`;
+      const stack = error.stack || new Error().stack;
+      sendLogCommand(8, errorMsg, stack, 'IPC:worker:sendCommand');
+      console.error('[IPC] Error handling command:', error);
       return { success: false, error: error.message };
     }
   });
@@ -441,6 +545,8 @@ function setupIpcHandlers(): void {
         'MergeFilesCommand': 'files/MergeFilesCommand',
         'GetVersionsListCommand': 'GetVersionsListCommand',
         'UnloadFilesCommand': 'files/UnloadFilesCommand',
+        'SetSpriteDimensionCommand': 'SetSpriteDimensionCommand',
+        'LoadVersionsCommand': 'LoadVersionsCommand',
       };
 
       const commandPath = commandMap[typeName];
@@ -458,38 +564,149 @@ function setupIpcHandlers(): void {
 
   // File dialog handlers
   ipcMain.handle('dialog:open', async (event, options: any) => {
-    if (!mainWindow) return { canceled: true };
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: options.title || 'Open File',
-      defaultPath: options.defaultPath,
-      filters: options.filters || [
-        { name: 'All Files', extensions: ['*'] }
-      ],
-      properties: options.properties || ['openFile'],
-    });
-    return result;
+    if (!mainWindow) {
+      sendLogCommand(6, 'File dialog called but mainWindow is null', undefined, 'IPC:dialog:open');
+      return { canceled: true };
+    }
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: options.title || 'Open File',
+        defaultPath: options.defaultPath,
+        filters: options.filters || [
+          { name: 'All Files', extensions: ['*'] }
+        ],
+        properties: options.properties || ['openFile'],
+      });
+      return result;
+    } catch (error: any) {
+      sendLogCommand(8, `Error in file dialog: ${error.message}`, error.stack, 'IPC:dialog:open');
+      return { canceled: true, error: error.message };
+    }
   });
 
   ipcMain.handle('dialog:save', async (event, options: any) => {
-    if (!mainWindow) return { canceled: true };
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: options.title || 'Save File',
-      defaultPath: options.defaultPath,
-      filters: options.filters || [
-        { name: 'All Files', extensions: ['*'] }
-      ],
-    });
-    return result;
+    if (!mainWindow) {
+      sendLogCommand(6, 'Save dialog called but mainWindow is null', undefined, 'IPC:dialog:save');
+      return { canceled: true };
+    }
+    try {
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: options.title || 'Save File',
+        defaultPath: options.defaultPath,
+        filters: options.filters || [
+          { name: 'All Files', extensions: ['*'] }
+        ],
+      });
+      return result;
+    } catch (error: any) {
+      sendLogCommand(8, `Error in save dialog: ${error.message}`, error.stack, 'IPC:dialog:save');
+      return { canceled: true, error: error.message };
+    }
   });
 
   ipcMain.handle('dialog:openDirectory', async (event, options: any) => {
-    if (!mainWindow) return { canceled: true };
-    const result = await dialog.showOpenDialog(mainWindow, {
-      title: options.title || 'Select Directory',
-      defaultPath: options.defaultPath,
-      properties: ['openDirectory'],
-    });
-    return result;
+    if (!mainWindow) {
+      sendLogCommand(6, 'Directory dialog called but mainWindow is null', undefined, 'IPC:dialog:openDirectory');
+      return { canceled: true };
+    }
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: options.title || 'Select Directory',
+        defaultPath: options.defaultPath,
+        properties: ['openDirectory'],
+      });
+      return result;
+    } catch (error: any) {
+      sendLogCommand(8, `Error in directory dialog: ${error.message}`, error.stack, 'IPC:dialog:openDirectory');
+      return { canceled: true, error: error.message };
+    }
+  });
+
+  // Get sprite dimensions list
+  ipcMain.handle('getSpriteDimensions', async (event) => {
+    try {
+      if (!backendApp) {
+        return { success: false, error: 'Backend not initialized' };
+      }
+
+      const SpriteDimensionStorage = require(path.join(__dirname, '../../otlib/core/SpriteDimensionStorage')).SpriteDimensionStorage;
+      const storage = SpriteDimensionStorage.getInstance();
+      
+      if (!storage.loaded) {
+        // Try to load from default location
+        const spritesPath = path.join(__dirname, '../../firstRun/sprites.xml');
+        if (fs.existsSync(spritesPath)) {
+          storage.load(spritesPath);
+        }
+      }
+
+      const dimensions = storage.getList();
+      const serialized = dimensions.map((dim: any) => ({
+        value: dim.value,
+        size: dim.size,
+        dataSize: dim.dataSize,
+      }));
+
+      return { success: true, dimensions: serialized };
+    } catch (error: any) {
+      const errorMsg = `Error getting sprite dimensions: ${error.message || 'Unknown error'}`;
+      sendLogCommand(8, errorMsg, error.stack, 'IPC:getSpriteDimensions');
+      console.error('Error getting sprite dimensions:', error);
+      return { success: false, error: error.message || 'Failed to get sprite dimensions' };
+    }
+  });
+
+  // Load OBD file for viewing (ObjectViewer)
+  ipcMain.handle('loadOBDFile', async (event, filePath: string) => {
+    try {
+      if (!backendApp || !(backendApp as any).settings) {
+        return { success: false, error: 'Backend not initialized' };
+      }
+
+      const ThingData = require(path.join(__dirname, '../../otlib/things/ThingData')).ThingData;
+      const settings = (backendApp as any).settings;
+      
+      const thingData = await ThingData.createFromFile(filePath, settings);
+      
+      if (!thingData) {
+        return { success: false, error: 'Failed to load OBD file' };
+      }
+
+      // Serialize ThingData for IPC
+      // Convert to plain object that can be sent via IPC
+      const serialized = {
+        thing: thingData.thing ? {
+          id: thingData.thing.id,
+          category: thingData.thing.category,
+          frameGroups: thingData.thing.frameGroups ? Object.fromEntries(
+            Object.entries(thingData.thing.frameGroups).map(([key, value]: [string, any]) => [
+              key,
+              value ? {
+                type: value.type,
+                width: value.width,
+                height: value.height,
+                layers: value.layers,
+                patternX: value.patternX,
+                patternY: value.patternY,
+                patternZ: value.patternZ,
+                frames: value.frames,
+                spriteIndex: value.spriteIndex,
+              } : null
+            ])
+          ) : {},
+        } : null,
+        sprites: thingData.sprites ? serializeObject(thingData.sprites) : null,
+        obdVersion: thingData.obdVersion,
+        clientVersion: thingData.clientVersion,
+      };
+
+      return { success: true, data: serialized };
+    } catch (error: any) {
+      const errorMsg = `Error loading OBD file: ${error.message || 'Unknown error'}`;
+      sendLogCommand(8, errorMsg, error.stack, 'IPC:loadOBDFile');
+      console.error('Error loading OBD file:', error);
+      return { success: false, error: error.message || 'Failed to load OBD file' };
+    }
   });
 }
 
@@ -514,23 +731,97 @@ async function initializeBackend(): Promise<void> {
       backendApp = new ObjectBuilderApp();
       console.log('Backend initialized');
       
-      // Listen for commands from backend
-      if (backendApp && (backendApp as any).communicator) {
-        (backendApp as any).communicator.on('command', (command: WorkerCommand) => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
+      // ObjectBuilderApp initializes asynchronously, so we need to wait for the communicator
+      // Set up a function to check for communicator and set up listener
+      let listenerSetup = false;
+      const setupCommandListener = () => {
+        if (listenerSetup) {
+          return true; // Already set up
+        }
+        
+        if (backendApp && (backendApp as any).communicator) {
+          const communicator = (backendApp as any).communicator;
+          console.log('[Electron] Setting up command listener on communicator');
+          console.log('[Electron] Communicator instance:', communicator.constructor.name);
+          console.log('[Electron] Current listener count:', communicator.listenerCount('command'));
+          
+          communicator.on('command', (command: WorkerCommand) => {
+            const commandName = command.constructor.name;
+            console.log(`[Electron] Command listener triggered: ${commandName}`);
+            
+            if (!mainWindow) {
+              console.warn(`[Electron] Cannot forward ${commandName} - mainWindow is null`);
+              return;
+            }
+            
+            if (mainWindow.isDestroyed()) {
+              console.warn(`[Electron] Cannot forward ${commandName} - mainWindow is destroyed`);
+              return;
+            }
+            
+            // LogCommand should NOT be processed by IPC handler - it's just forwarded to renderer
+            // This prevents infinite loops where LogCommand errors create more LogCommands
+            if (commandName === 'LogCommand') {
+              // Forward LogCommand directly to renderer without processing
+              const cmd = command as any;
+              const serializedCommand = {
+                type: 'LogCommand',
+                level: cmd.level,
+                message: cmd.message,
+                stack: cmd.stack,
+                source: cmd.source,
+                timestamp: cmd.timestamp || Date.now(),
+              };
+              mainWindow.webContents.send('worker:command', serializedCommand);
+              return;
+            }
+            
             // Serialize command data for IPC (convert ByteArray/Buffer to ArrayBuffer)
             const serializedCommand = serializeCommand(command);
             
+            // Don't log ProgressCommand spam - it's sent very frequently during loading
+            if (commandName !== 'ProgressCommand') {
+              console.log(`[Electron] Forwarding ${commandName} to renderer`);
+            }
+            
             // Send command to renderer process
             mainWindow.webContents.send('worker:command', serializedCommand);
+          });
+          console.log('[Electron] Command listener set up successfully');
+          listenerSetup = true;
+          return true;
+        }
+        return false;
+      };
+      
+      // Try to set up immediately
+      if (!setupCommandListener()) {
+        // If communicator not ready, poll for it (ObjectBuilderApp initializes asynchronously)
+        console.log('[Electron] Communicator not ready yet, polling...');
+        const pollInterval = setInterval(() => {
+          if (setupCommandListener()) {
+            clearInterval(pollInterval);
           }
-        });
+        }, 100);
+        
+        // Stop polling after 5 seconds
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          if (!(backendApp && (backendApp as any).communicator)) {
+            console.error('[Electron] Failed to set up command listener - communicator never became available');
+          }
+        }, 5000);
       }
     }
   } catch (error: any) {
+    const errorMsg = `Failed to initialize backend: ${error.message}`;
+    sendLogCommand(8, errorMsg, error.stack, 'Backend:initialize');
     console.error('Failed to initialize backend:', error);
+    
     // If canvas module is missing, provide helpful error message
     if (error.message && error.message.includes('canvas.node')) {
+      const canvasError = 'The canvas module needs to be rebuilt for Electron. Please run: npm run rebuild';
+      sendLogCommand(8, canvasError, undefined, 'Backend:initialize');
       console.error('\n=== CANVAS MODULE ERROR ===');
       console.error('The canvas module needs to be rebuilt for Electron.');
       console.error('Please run: npm run rebuild');
@@ -731,6 +1022,15 @@ function createMenu(): void {
           click: () => {
             if (mainWindow) {
               mainWindow.webContents.send('menu-action', 'tools-find');
+            }
+          },
+        },
+        {
+          label: 'Object Viewer',
+          accelerator: 'CmdOrCtrl+Shift+O',
+          click: () => {
+            if (mainWindow) {
+              mainWindow.webContents.send('menu-action', 'tools-object-viewer');
             }
           },
         },

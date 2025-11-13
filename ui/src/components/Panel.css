@@ -10,7 +10,9 @@
 }
 
 .preview-panel {
-  width: 165px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .panel-header {

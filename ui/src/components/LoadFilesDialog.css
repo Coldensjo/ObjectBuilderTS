@@ -70,6 +70,29 @@
   flex-shrink: 0;
 }
 
+.file-path-icon.error {
+  color: #ff4444;
+}
+
+.file-path-error {
+  border-color: #ff4444;
+  background-color: rgba(255, 68, 68, 0.1);
+}
+
+.file-error-message {
+  font-size: 11px;
+  color: #ff4444;
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+.load-files-validating {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 .file-path-placeholder {
   color: var(--text-tertiary);
   font-style: italic;

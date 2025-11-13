@@ -9,6 +9,7 @@ interface DialogProps {
   width?: number;
   height?: number;
   footer?: React.ReactNode;
+  modal?: boolean; // If false, dialog won't block interaction with background
 }
 
 export const Dialog: React.FC<DialogProps> = ({
@@ -19,6 +20,7 @@ export const Dialog: React.FC<DialogProps> = ({
   width = 500,
   height = 400,
   footer,
+  modal = true, // Default to modal behavior
 }) => {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -29,19 +31,26 @@ export const Dialog: React.FC<DialogProps> = ({
 
     if (open) {
       document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      if (modal) {
+        document.body.style.overflow = 'hidden';
+      }
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
+      if (modal) {
+        document.body.style.overflow = '';
+      }
     };
-  }, [open, onClose]);
+  }, [open, onClose, modal]);
 
   if (!open) return null;
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
+    <div 
+      className={`dialog-overlay ${modal ? 'dialog-modal' : 'dialog-non-modal'}`} 
+      onClick={modal ? onClose : undefined}
+    >
       <div
         className="dialog-container"
         style={{ width: `${width}px`, height: `${height}px` }}

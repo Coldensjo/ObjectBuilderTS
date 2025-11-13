@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAppStateContext } from '../contexts/AppStateContext';
 import { useWorker } from '../contexts/WorkerContext';
 import { PreviewCanvas } from './PreviewCanvas';
 import { Panel } from './Panel';
@@ -10,16 +9,15 @@ interface PreviewPanelProps {
 }
 
 export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
-  const { selectedThingIds } = useAppStateContext();
   const worker = useWorker();
   const [thingData, setThingData] = useState<any>(null);
   const [frameGroupType, setFrameGroupType] = useState(0); // DEFAULT
   const [patternX, setPatternX] = useState(0);
   const [patternY, setPatternY] = useState(0);
   const [patternZ, setPatternZ] = useState(0);
-  const [animate, setAnimate] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [currentFrame, setCurrentFrame] = useState(0);
+  const [animate, setAnimate] = useState(false);
 
   // Listen for SetThingDataCommand to update preview
   useEffect(() => {
@@ -87,7 +85,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
 
   return (
     <Panel
-      title="Preview"
+      title="Preview Panel"
       className="preview-panel"
       onClose={onClose}
       collapsible={true}
@@ -98,8 +96,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
               <div className="preview-canvas-section">
                 <PreviewCanvas
                   thingData={thingData}
-                  width={256}
-                  height={256}
+                  width={280}
+                  height={280}
                   frameGroupType={frameGroupType}
                   patternX={patternX}
                   patternY={patternY}

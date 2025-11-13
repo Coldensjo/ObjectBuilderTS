@@ -181,6 +181,15 @@ export class CommandFactory {
     };
   }
 
+  static createSetSpriteDimensionCommand(value: string, size: number, dataSize: number): CommandData {
+    return {
+      type: 'SetSpriteDimensionCommand',
+      value,
+      size,
+      dataSize,
+    };
+  }
+
   static createCompileAsCommand(
     datFile: string,
     sprFile: string,

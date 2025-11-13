@@ -93,13 +93,43 @@ export class ObjectBuilderApp {
             throw new Error("Settings must be initialized before creating worker");
         }
 
-        this._communicator = new WorkerCommunicator();
         this._worker = new ObjectBuilderWorker();
         
+        // Get the communicator from the worker (it creates its own)
+        const workerCommunicator = (this._worker as any)._communicator as WorkerCommunicator | null;
+        
+        if (!workerCommunicator) {
+            throw new Error("Failed to get communicator from worker");
+        }
+        
+        this._communicator = workerCommunicator;
+        
+        // Initialize worker with settings
+        if (this._worker && this._settings) {
+            // Set settings using the settingsCallback method
+            const SettingsCommand = require("./ob/commands/SettingsCommand").SettingsCommand;
+            const settingsCommand = new SettingsCommand(this._settings);
+            workerCommunicator.handleCommand(settingsCommand);
+        }
+        
+        // Register callbacks - this is critical! (register() is called in constructor, but ensure it happened)
+        if (this._worker) {
+            console.log("Worker created and registered successfully");
+        }
+        
+        // Initialize Logger with communicator
+        const { Logger } = require("./ob/utils/Logger");
+        Logger.setCommunicator(this._communicator);
+        
         // Set up command handling
+        // Note: This listener is for logging only
+        // The Electron main process also listens to this same communicator instance
+        // to forward commands to the renderer
         this._communicator.on("command", (command: WorkerCommand) => {
             this.handleCommand(command);
         });
+        
+        console.log("Command listener set up on communicator. Event listeners:", (this._communicator as any).listenerCount('command'));
 
         // Start the communicator
         this._communicator.start();
@@ -165,11 +195,17 @@ export class ObjectBuilderApp {
 
     private handleCommand(command: WorkerCommand): void {
         // Handle commands from the worker
-        // This is where UI updates would happen
-        console.log("Received command from worker:", command.constructor.name);
+        // Commands are automatically forwarded to Electron main process via the communicator event
+        // This method is just for logging/debugging
+        const commandName = command.constructor.name;
         
-        // TODO: Implement command handling for UI updates
-        // For now, just log the command
+        // Don't log ProgressCommand spam - it's sent very frequently during loading
+        if (commandName !== 'ProgressCommand') {
+            console.log("Received command from worker:", commandName);
+        }
+        
+        // Commands are forwarded to Electron main process via communicator.on('command') listener
+        // which is set up in electron/main.ts initializeBackend()
     }
 
     public get worker(): ObjectBuilderWorker | null {

@@ -4,6 +4,8 @@
   background-color: #636363;
   border: 1px solid #272727;
   box-sizing: border-box;
+  /* Ensure background covers the entire area to prevent parent background from showing through */
+  overflow: hidden;
 }
 
 .sprite-thumbnail-canvas {

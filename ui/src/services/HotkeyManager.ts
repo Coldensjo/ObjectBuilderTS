@@ -1,6 +1,5 @@
 import { Hotkey } from './Hotkey';
 import { HotkeyDefinition } from './HotkeyDefinition';
-import { EventEmitter } from 'events';
 
 export interface HotkeyManagerEvent {
   type: 'hotkey_changed';
@@ -8,10 +7,46 @@ export interface HotkeyManagerEvent {
   hotkey: Hotkey | null;
 }
 
+type EventListener = (event: HotkeyManagerEvent) => void;
+
+/**
+ * Simple EventEmitter for browser compatibility
+ */
+class SimpleEventEmitter {
+  private listeners: Map<string, Set<EventListener>> = new Map();
+
+  on(event: string, listener: EventListener): void {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(listener);
+  }
+
+  off(event: string, listener: EventListener): void {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.delete(listener);
+    }
+  }
+
+  emit(event: string, data: HotkeyManagerEvent): void {
+    const eventListeners = this.listeners.get(event);
+    if (eventListeners) {
+      eventListeners.forEach(listener => {
+        try {
+          listener(data);
+        } catch (error) {
+          console.error(`Error in event listener for ${event}:`, error);
+        }
+      });
+    }
+  }
+}
+
 /**
  * HotkeyManager manages keyboard shortcuts
  */
-export class HotkeyManager extends EventEmitter {
+export class HotkeyManager extends SimpleEventEmitter {
   private _definitions: HotkeyDefinition[] = [];
   private _definitionsById: Map<string, HotkeyDefinition> = new Map();
   private _definitionsBySignature: Map<string, HotkeyDefinition> = new Map();

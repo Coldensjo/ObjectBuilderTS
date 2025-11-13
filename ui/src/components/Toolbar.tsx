@@ -116,38 +116,82 @@ export const Toolbar: React.FC = () => {
   const handleOpen = async () => {
     try {
       const fileDialog = FileDialogService.getInstance();
-      const result = await fileDialog.openDatSprFiles();
       
-      if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-        // Find DAT and SPR files
-        const datFile = result.filePaths.find(p => p.toLowerCase().endsWith('.dat'));
-        const sprFile = result.filePaths.find(p => p.toLowerCase().endsWith('.spr'));
+      // First, try to get both files at once
+      let result = await fileDialog.openDatSprFiles();
+      
+      if (result.canceled) {
+        return;
+      }
+      
+      if (!result.filePaths || result.filePaths.length === 0) {
+        return;
+      }
+      
+      // Find DAT and SPR files from selection
+      let datFile = result.filePaths.find(p => p.toLowerCase().endsWith('.dat'));
+      let sprFile = result.filePaths.find(p => p.toLowerCase().endsWith('.spr'));
+      
+      // If only one file type is selected, prompt for the other
+      if (!datFile && !sprFile) {
+        showError('Please select at least one .dat or .spr file');
+        return;
+      }
+      
+      // Get directory from first selected file for subsequent dialogs
+      const path = (window as any).require ? (window as any).require('path') : null;
+      const dirname = path ? path.dirname : ((p: string) => p.substring(0, p.lastIndexOf('/') || p.lastIndexOf('\\')));
+      const defaultDir = result.filePaths.length > 0 ? dirname(result.filePaths[0]) : undefined;
+      
+      // If DAT file is missing, prompt for it
+      if (!datFile) {
+        const datResult = await fileDialog.showOpenDialog({
+          title: 'Select DAT File',
+          defaultPath: defaultDir,
+          filters: [
+            { name: 'DAT Files', extensions: ['dat'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: ['openFile'],
+        });
         
-        if (!datFile) {
-          showError('Please select a DAT file (.dat)');
+        if (datResult.canceled || !datResult.filePaths || datResult.filePaths.length === 0) {
           return;
         }
         
-        if (!sprFile) {
-          showError('Please select a SPR file (.spr)');
-          return;
-        }
-        
-        // Validate file extensions
+        datFile = datResult.filePaths[0];
         if (!datFile.toLowerCase().endsWith('.dat')) {
           showError('Invalid DAT file. Please select a file with .dat extension');
           return;
         }
+      }
+      
+      // If SPR file is missing, prompt for it
+      if (!sprFile) {
+        const sprResult = await fileDialog.showOpenDialog({
+          title: 'Select SPR File',
+          defaultPath: defaultDir,
+          filters: [
+            { name: 'SPR Files', extensions: ['spr'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: ['openFile'],
+        });
         
+        if (sprResult.canceled || !sprResult.filePaths || sprResult.filePaths.length === 0) {
+          return;
+        }
+        
+        sprFile = sprResult.filePaths[0];
         if (!sprFile.toLowerCase().endsWith('.spr')) {
           showError('Invalid SPR file. Please select a file with .spr extension');
           return;
         }
-        
-        setSelectedDatFile(datFile);
-        setSelectedSprFile(sprFile);
-        setLoadDialogOpen(true);
       }
+      
+      setSelectedDatFile(datFile);
+      setSelectedSprFile(sprFile);
+      setLoadDialogOpen(true);
     } catch (error: any) {
       showError(error.message || 'Failed to open project');
       console.error('Failed to open project:', error);
@@ -161,13 +205,31 @@ export const Toolbar: React.FC = () => {
     improvedAnimations: boolean;
     frameGroups: boolean;
   }) => {
+    console.log('[Toolbar] handleLoadFiles called with:', options);
+    
     if (!selectedDatFile || !selectedSprFile) {
       showError('Please select both DAT and SPR files');
       return;
     }
 
+    // Version can be null for auto-detect - backend will auto-detect from file signatures
+    // if (!options.version) {
+    //   showError('Please select a version');
+    //   return;
+    // }
+
     try {
       showProgress('Loading project files...');
+      console.log('[Toolbar] Creating LoadFilesCommand:', {
+        datFile: selectedDatFile,
+        sprFile: selectedSprFile,
+        version: options.version,
+        extended: options.extended,
+        transparency: options.transparency,
+        improvedAnimations: options.improvedAnimations,
+        frameGroups: options.frameGroups,
+      });
+      
       const command = CommandFactory.createLoadFilesCommand(
         selectedDatFile,
         selectedSprFile,
@@ -177,7 +239,10 @@ export const Toolbar: React.FC = () => {
         options.improvedAnimations,
         options.frameGroups
       );
+      
+      console.log('[Toolbar] Sending command:', command);
       const loadResult = await worker.sendCommand(command);
+      console.log('[Toolbar] Received result:', loadResult);
       hideProgress();
       if (loadResult.success) {
         // Get client info for success message (may not be available immediately)

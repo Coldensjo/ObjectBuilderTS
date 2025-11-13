@@ -4,12 +4,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
   animation: fadeIn 0.2s ease;
+}
+
+.dialog-overlay.dialog-modal {
+  background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.dialog-overlay.dialog-non-modal {
+  background-color: transparent;
+  pointer-events: none; /* Allow clicks to pass through overlay */
+}
+
+.dialog-overlay.dialog-non-modal .dialog-container {
+  pointer-events: auto; /* But allow clicks on the dialog itself */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); /* Stronger shadow for visibility */
 }
 
 @keyframes fadeIn {

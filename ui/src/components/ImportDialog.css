@@ -126,3 +126,32 @@
   line-height: 1.5;
 }
 
+.import-file-item.invalid {
+  border-color: #ff4444;
+  background-color: rgba(255, 68, 68, 0.1);
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-size {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.file-error {
+  font-size: 10px;
+  color: #ff4444;
+}
+
+.import-validating {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+

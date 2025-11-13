@@ -16,6 +16,7 @@ import { ExportDialog } from './ExportDialog';
 import { MergeFilesDialog } from './MergeFilesDialog';
 import { LogWindow } from './LogWindow';
 import { FileInfoPanel } from './FileInfoPanel';
+import { ObjectViewer } from './ObjectViewer';
 import { AppStateProvider } from '../contexts/AppStateContext';
 import { ProgressProvider } from '../contexts/ProgressContext';
 import { CommandFactory } from '../services/CommandFactory';
@@ -39,7 +40,8 @@ const MainWindowContent: React.FC = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [showLogWindow, setShowLogWindow] = useState(false);
-  const [showFileInfoPanel, setShowFileInfoPanel] = useState(true);
+  const [showFileInfoPanel, setShowFileInfoPanel] = useState(false); // Off by default
+  const [showObjectViewer, setShowObjectViewer] = useState(false);
   const [exportType, setExportType] = useState<'things' | 'sprites'>('things');
   const windowRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +106,9 @@ const MainWindowContent: React.FC = () => {
         case 'tools-find':
           setShowFindDialog(true);
           break;
+        case 'tools-object-viewer':
+          setShowObjectViewer(true);
+          break;
         case 'file-import':
           setShowImportDialog(true);
           break;
@@ -150,11 +155,6 @@ const MainWindowContent: React.FC = () => {
             {showPreviewPanel && (
               <PreviewPanel
                 onClose={() => setShowPreviewPanel(false)}
-              />
-            )}
-            {showFileInfoPanel && (
-              <FileInfoPanel
-                onClose={() => setShowFileInfoPanel(false)}
               />
             )}
           </div>
@@ -319,6 +319,21 @@ const MainWindowContent: React.FC = () => {
         open={showLogWindow}
         onClose={() => setShowLogWindow(false)}
       />
+      {showObjectViewer && (
+        <div className="object-viewer-overlay">
+          <div className="object-viewer-container">
+            <div className="object-viewer-header">
+              <h2>Object Viewer</h2>
+              <Button variant="secondary" onClick={() => setShowObjectViewer(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="object-viewer-content-wrapper">
+              <ObjectViewer onClose={() => setShowObjectViewer(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useWorker } from '../contexts/WorkerContext';
 import { useAppStateContext } from '../contexts/AppStateContext';
 import { CommandFactory } from '../services/CommandFactory';
@@ -21,19 +21,52 @@ interface ThingListItem {
 
 export const ThingList: React.FC = () => {
   const worker = useWorker();
-  const { currentCategory, selectedThingIds, setSelectedThingIds } = useAppStateContext();
+  const { currentCategory, selectedThingIds, setSelectedThingIds, clientInfo } = useAppStateContext();
   const [things, setThings] = useState<ThingListItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const clientLoaded = clientInfo?.loaded || false;
+
+  const loadThingList = useCallback(async () => {
+    if (!clientLoaded) {
+      console.log('[ThingList] Not loading - client not loaded');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Use appropriate starting ID based on category
+      // Items start at 100, outfits/effects/missiles start at 1
+      const targetId = currentCategory === 'item' ? 100 : 1;
+      console.log(`[ThingList] Loading thing list: category=${currentCategory}, targetId=${targetId}`);
+      const command = CommandFactory.createGetThingListCommand(targetId, currentCategory);
+      await worker.sendCommand(command);
+    } catch (error) {
+      console.error('[ThingList] Failed to load thing list:', error);
+      setLoading(false);
+    }
+  }, [currentCategory, worker, clientLoaded]);
 
   useEffect(() => {
     // Load thing list when category changes
     loadThingList();
-  }, [currentCategory]);
+  }, [currentCategory, loadThingList]);
+
+  // Reload thing list when client becomes loaded
+  useEffect(() => {
+    if (clientLoaded) {
+      loadThingList();
+    } else {
+      // Clear things when client is unloaded
+      setThings([]);
+    }
+  }, [clientLoaded, loadThingList]);
 
   // Listen for SetThingListCommand
   useEffect(() => {
     const handleCommand = (command: any) => {
       if (command.type === 'SetThingListCommand') {
+        console.log('[ThingList] Received SetThingListCommand:', command);
+        console.log('[ThingList] Full command structure:', JSON.stringify(command, null, 2));
         // Extract thing list from command
         // Command structure: { type, data: { selectedIds, list: ThingListItem[] } }
         // Or: { type, selectedIds, things: ThingListItem[] }
@@ -43,9 +76,13 @@ export const ThingList: React.FC = () => {
         if (command.data) {
           thingList = command.data.list || command.data.things || [];
           selectedIds = command.data.selectedIds || [];
+          console.log('[ThingList] Extracted from data:', { thingListLength: thingList.length, selectedIds });
         } else if (command.things) {
           thingList = command.things;
           selectedIds = command.selectedIds || [];
+          console.log('[ThingList] Extracted from things:', { thingListLength: thingList.length, selectedIds });
+        } else {
+          console.warn('[ThingList] No data or things found in command:', command);
         }
         
         // Transform ThingListItem objects to UI format
@@ -82,32 +119,91 @@ export const ThingList: React.FC = () => {
           };
         });
         
+        console.log('[ThingList] Setting things:', transformedList.length, 'items');
         setThings(transformedList);
         if (selectedIds.length > 0) {
           setSelectedThingIds(selectedIds);
         }
         setLoading(false);
+      } else if (command.type === 'SetThingDataCommand') {
+        // Clear loading flag when thing data is received
+        loadingThingRef.current = null;
       }
     };
 
     worker.onCommand(handleCommand);
   }, [worker, setSelectedThingIds]);
 
-  const loadThingList = async () => {
-    setLoading(true);
-    try {
-      const command = CommandFactory.createGetThingListCommand(100, currentCategory);
-      await worker.sendCommand(command);
-    } catch (error) {
-      console.error('Failed to load thing list:', error);
-      setLoading(false);
+  const handleThingClick = (id: number, e?: React.MouseEvent) => {
+    if (e && (e.ctrlKey || e.metaKey)) {
+      // Multi-select: toggle this thing
+      setSelectedThingIds(prev => {
+        if (prev.includes(id)) {
+          return prev.filter(tid => tid !== id);
+        } else {
+          return [...prev, id];
+        }
+      });
+    } else if (e && e.shiftKey && selectedThingIds.length > 0) {
+      // Range select: select from last selected to this one
+      const currentIndex = things.findIndex(t => t.id === id);
+      const lastSelectedIndex = things.findIndex(t => t.id === selectedThingIds[selectedThingIds.length - 1]);
+      if (currentIndex >= 0 && lastSelectedIndex >= 0) {
+        const start = Math.min(currentIndex, lastSelectedIndex);
+        const end = Math.max(currentIndex, lastSelectedIndex);
+        const rangeIds = things.slice(start, end + 1).map(t => t.id).filter((id): id is number => id !== undefined);
+        setSelectedThingIds(prev => {
+          const newIds = [...prev];
+          rangeIds.forEach(rid => {
+            if (!newIds.includes(rid)) {
+              newIds.push(rid);
+            }
+          });
+          return newIds;
+        });
+      }
+    } else {
+      // Single select
+      setSelectedThingIds([id]);
+      // Load thing data
+      loadThing(id);
     }
   };
 
-  const handleThingClick = (id: number) => {
-    setSelectedThingIds([id]);
-    // Load thing data
-    loadThing(id);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; thingId: number } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, thingId: number) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, thingId });
+  };
+
+  const handleContextMenuAction = async (action: string) => {
+    if (!contextMenu) return;
+    
+    const thingId = contextMenu.thingId;
+    const idsToUse = selectedThingIds.includes(thingId) ? selectedThingIds : [thingId];
+    
+    switch (action) {
+      case 'export':
+        // Trigger export dialog
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('export-things', { detail: { ids: idsToUse } }));
+        }
+        break;
+      case 'duplicate':
+        // Duplicate things
+        console.log('Duplicate things:', idsToUse);
+        // This would need a DuplicateThingCommand
+        break;
+      case 'delete':
+        if (confirm(`Delete ${idsToUse.length} thing(s)?`)) {
+          // This would need a RemoveThingCommand
+          console.log('Delete things:', idsToUse);
+        }
+        break;
+    }
+    
+    setContextMenu(null);
   };
 
   // Keyboard navigation (only when list container is focused)
@@ -158,12 +254,22 @@ export const ThingList: React.FC = () => {
     return () => listElement.removeEventListener('keydown', handleKeyDown);
   }, [things, selectedThingIds]);
 
+  // Cache to prevent duplicate requests
+  const loadingThingRef = useRef<number | null>(null);
+  
   const loadThing = async (id: number) => {
+    // Prevent duplicate requests for the same thing
+    if (loadingThingRef.current === id) {
+      return;
+    }
+    
+    loadingThingRef.current = id;
     try {
       const command = CommandFactory.createGetThingCommand(id, currentCategory);
       await worker.sendCommand(command);
     } catch (error) {
       console.error('Failed to load thing:', error);
+      loadingThingRef.current = null;
     }
   };
 
@@ -201,15 +307,17 @@ export const ThingList: React.FC = () => {
                 className={`thing-list-item ${
                   selectedThingIds.includes(thing.id) ? 'selected' : ''
                 }`}
-                onClick={() => handleThingClick(thing.id)}
-                title={`Thing #${thing.id}${thing.name ? ` - ${thing.name}` : ''}`}
+                onClick={(e) => handleThingClick(thing.id, e)}
+                onContextMenu={(e) => handleContextMenu(e, thing.id)}
+                title={`Thing #${thing.id}${selectedThingIds.length > 1 ? ` (${selectedThingIds.length} selected)` : ''}${thing.name ? ` - ${thing.name}` : ''}`}
               >
                 <div className="thing-list-item-preview">
                   {thing.spritePixels || thing.pixels ? (
                     <SpriteThumbnail 
                       pixels={thing.spritePixels || thing.pixels} 
                       size={32} 
-                      scale={2} 
+                      scale={2}
+                      format={thing.spritePixels ? 'argb' : 'rgba'} // spritePixels are ARGB; bitmap pixels are RGBA
                     />
                   ) : (
                     <div className="thing-list-item-placeholder">#{thing.id}</div>
@@ -225,6 +333,24 @@ export const ThingList: React.FC = () => {
             ))}
           </div>
         </>
+      )}
+      {contextMenu && (
+        <div
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onMouseLeave={() => setContextMenu(null)}
+        >
+          <div className="context-menu-item" onClick={() => handleContextMenuAction('export')}>
+            Export Thing{selectedThingIds.length > 1 ? 's' : ''}
+          </div>
+          <div className="context-menu-item" onClick={() => handleContextMenuAction('duplicate')}>
+            Duplicate Thing{selectedThingIds.length > 1 ? 's' : ''}
+          </div>
+          <div className="context-menu-separator"></div>
+          <div className="context-menu-item" onClick={() => handleContextMenuAction('delete')}>
+            Delete Thing{selectedThingIds.length > 1 ? 's' : ''}
+          </div>
+        </div>
       )}
     </div>
   );

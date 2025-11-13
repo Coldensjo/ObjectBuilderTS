@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWorker } from '../contexts/WorkerContext';
 import { useAppStateContext } from '../contexts/AppStateContext';
 import { useToast } from '../hooks/useToast';
@@ -32,13 +32,27 @@ export const ThingEditor: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<any>({});
 
-  // Load thing when selection changes
+  // Cache to prevent duplicate requests
+  const loadingThingRef = useRef<number | null>(null);
+  
+  // Load thing when selection changes (debounced)
   useEffect(() => {
     if (selectedThingIds.length > 0) {
-      loadThing(selectedThingIds[0]);
+      const id = selectedThingIds[0];
+      // Prevent duplicate requests
+      if (loadingThingRef.current === id) {
+        return;
+      }
+      loadingThingRef.current = id;
+      // Debounce to prevent rapid reloads
+      const timeoutId = setTimeout(() => {
+        loadThing(id);
+      }, 100);
+      return () => clearTimeout(timeoutId);
     } else {
       setThingData(null);
       setFormData({});
+      loadingThingRef.current = null;
     }
   }, [selectedThingIds, currentCategory]);
 
@@ -46,16 +60,24 @@ export const ThingEditor: React.FC = () => {
   useEffect(() => {
     const handleCommand = (command: any) => {
       if (command.type === 'SetThingDataCommand') {
-        setThingData(command.data);
-        if (command.data && command.data.thing) {
-          setFormData(command.data.thing);
+        const thingId = command.data?.thing?.id;
+        const thingCategory = command.data?.thing?.category;
+        
+        // Only update if this matches the current selection
+        if (thingId && selectedThingIds.length > 0 && selectedThingIds[0] === thingId && 
+            thingCategory === currentCategory) {
+          setThingData(command.data);
+          if (command.data && command.data.thing) {
+            setFormData(command.data.thing);
+          }
+          setLoading(false);
+          loadingThingRef.current = null; // Clear loading flag
         }
-        setLoading(false);
       }
     };
 
     worker.onCommand(handleCommand);
-  }, [worker]);
+  }, [worker, selectedThingIds, currentCategory]);
 
   const loadThing = async (id: number) => {
     setLoading(true);

@@ -20,33 +20,30 @@
 *  THE SOFTWARE.
 */
 
-import { WorkerCommand } from "../../../workers/WorkerCommand";
-import { Version } from "../../../otlib/core/Version";
+import { WorkerCommand } from "../../workers/WorkerCommand";
 
-export class LoadFilesCommand extends WorkerCommand {
-    public datFile: string;
-    public sprFile: string;
-    public version: Version | null;
-    public extended: boolean;
-    public transparency: boolean;
-    public improvedAnimations: boolean;
-    public frameGroups: boolean;
+export enum LogLevel {
+    DEBUG = 2,
+    INFO = 4,
+    WARN = 6,
+    ERROR = 8,
+    FATAL = 1000
+}
 
-    constructor(datFile: string,
-                sprFile: string,
-                version: Version | null,
-                extended: boolean,
-                transparency: boolean,
-                improvedAnimations: boolean,
-                frameGroups: boolean) {
-        super();
-        this.datFile = datFile;
-        this.sprFile = sprFile;
-        this.version = version;
-        this.extended = extended;
-        this.transparency = transparency;
-        this.improvedAnimations = improvedAnimations;
-        this.frameGroups = frameGroups;
+export class LogCommand extends WorkerCommand {
+    public level: LogLevel;
+    public message: string;
+    public stack?: string;
+    public source?: string;
+    public timestamp: number;
+
+    constructor(level: LogLevel, message: string, stack?: string, source?: string) {
+        super({ level, message, stack, source, timestamp: Date.now() });
+        this.level = level;
+        this.message = message;
+        this.stack = stack;
+        this.source = source;
+        this.timestamp = Date.now();
     }
 }
 

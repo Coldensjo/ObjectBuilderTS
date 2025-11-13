@@ -44,6 +44,30 @@
   width: 150px;
 }
 
+.preferences-select {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 200px;
+}
+
+.preferences-select:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.preferences-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: block;
+  font-style: italic;
+}
+
 .preferences-field.checkbox-field label {
   flex-direction: row;
   align-items: center;

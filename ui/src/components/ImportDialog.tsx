@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from './Button';
 import { FileDialogService } from '../services/FileDialogService';
 import './ImportDialog.css';
 
 type ImportType = 'things' | 'sprites' | 'sprites-spr';
+
+interface FileInfo {
+  path: string;
+  name: string;
+  size?: number;
+  valid?: boolean;
+  error?: string;
+}
 
 interface ImportDialogProps {
   open: boolean;
@@ -23,7 +31,47 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
   importType = 'things',
 }) => {
   const [type, setType] = useState<ImportType>(importType);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileInfo[]>([]);
+  const [validating, setValidating] = useState(false);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const validateFile = async (filePath: string): Promise<{ valid: boolean; error?: string; size?: number }> => {
+    try {
+      const fs = (window as any).require ? (window as any).require('fs') : null;
+      if (!fs) {
+        return { valid: true }; // Can't validate without fs
+      }
+
+      const stats = fs.statSync(filePath);
+      const size = stats.size;
+      
+      // Basic validation
+      if (size === 0) {
+        return { valid: false, error: 'File is empty', size };
+      }
+
+      // Type-specific validation
+      const ext = filePath.split('.').pop()?.toLowerCase();
+      if (type === 'things' && ext !== 'obd') {
+        return { valid: false, error: 'Not an OBD file', size };
+      }
+      if (type === 'sprites-spr' && ext !== 'spr') {
+        return { valid: false, error: 'Not an SPR file', size };
+      }
+      if (type === 'sprites' && !['png', 'jpg', 'jpeg', 'bmp', 'gif'].includes(ext || '')) {
+        return { valid: false, error: 'Not a supported image format', size };
+      }
+
+      return { valid: true, size };
+    } catch (error: any) {
+      return { valid: false, error: error.message || 'Validation failed' };
+    }
+  };
 
   const handleBrowseFiles = async () => {
     try {
@@ -39,25 +87,56 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       }
 
       if (!result.canceled && result.filePaths) {
-        setSelectedFiles(result.filePaths);
+        setValidating(true);
+        const fileInfos: FileInfo[] = [];
+        
+        for (const filePath of result.filePaths) {
+          const validation = await validateFile(filePath);
+          const name = filePath.split(/[/\\]/).pop() || filePath;
+          fileInfos.push({
+            path: filePath,
+            name,
+            size: validation.size,
+            valid: validation.valid,
+            error: validation.error,
+          });
+        }
+        
+        setSelectedFiles(fileInfos);
+        setValidating(false);
       }
     } catch (error) {
       console.error('Failed to open file dialog:', error);
+      setValidating(false);
     }
   };
 
   const handleImport = () => {
-    if (selectedFiles.length === 0) {
-      alert('Please select at least one file to import.');
+    const validFiles = selectedFiles.filter(f => f.valid !== false);
+    
+    if (validFiles.length === 0) {
+      alert('Please select at least one valid file to import.');
       return;
+    }
+
+    if (validFiles.length < selectedFiles.length) {
+      const invalidCount = selectedFiles.length - validFiles.length;
+      if (!confirm(`${invalidCount} file(s) are invalid and will be skipped. Continue?`)) {
+        return;
+      }
     }
 
     onImport({
       type,
-      files: selectedFiles,
+      files: validFiles.map(f => f.path),
     });
     onClose();
   };
+
+  // Reset files when type changes
+  useEffect(() => {
+    setSelectedFiles([]);
+  }, [type]);
 
   const handleRemoveFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
@@ -137,13 +216,31 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
               <span className="file-count">{selectedFiles.length} file(s) selected</span>
             )}
           </div>
+          {validating && (
+            <div className="import-validating">
+              <p>Validating files...</p>
+            </div>
+          )}
           {selectedFiles.length > 0 && (
             <div className="import-files-list">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="import-file-item">
-                  <span className="file-name" title={file}>
-                    {file.split(/[/\\]/).pop()}
-                  </span>
+                <div 
+                  key={index} 
+                  className={`import-file-item ${file.valid === false ? 'invalid' : ''}`}
+                >
+                  <div className="file-info">
+                    <span className="file-name" title={file.path}>
+                      {file.name}
+                    </span>
+                    {file.size !== undefined && (
+                      <span className="file-size">{formatFileSize(file.size)}</span>
+                    )}
+                    {file.valid === false && file.error && (
+                      <span className="file-error" title={file.error}>
+                        ⚠ {file.error}
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className="remove-file-button"

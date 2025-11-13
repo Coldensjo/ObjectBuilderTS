@@ -31,7 +31,28 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
   });
   const [hotkeyDefinitions, setHotkeyDefinitions] = useState<HotkeyDefinition[]>([]);
   const [loading, setLoading] = useState(false);
+  const [spriteDimensions, setSpriteDimensions] = useState<Array<{value: string; size: number; dataSize: number}>>([]);
+  const [selectedSpriteDimension, setSelectedSpriteDimension] = useState<string>('32x32');
   const hotkeyManager = getHotkeyManager();
+
+  const loadSpriteDimensions = async () => {
+    try {
+      // Request sprite dimensions from backend
+      // This would need a GetSpriteDimensionsListCommand
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI && electronAPI.getSpriteDimensions) {
+        const result = await electronAPI.getSpriteDimensions();
+        if (result.success && result.dimensions) {
+          setSpriteDimensions(result.dimensions);
+          if (result.dimensions.length > 0 && !selectedSpriteDimension) {
+            setSelectedSpriteDimension(result.dimensions[0].value);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load sprite dimensions:', error);
+    }
+  };
 
   useEffect(() => {
     // Listen for settings from backend
@@ -50,12 +71,26 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
           hotkeyManager.load({ hotkeysConfig: settingsData.hotkeysConfig });
         }
       }
+      
+      // Listen for sprite dimensions list
+      if (command.type === 'SetSpriteDimensionsListCommand' && command.data && command.data.dimensions) {
+        setSpriteDimensions(command.data.dimensions);
+        // Set default to first dimension or current if available
+        if (command.data.dimensions.length > 0 && !selectedSpriteDimension) {
+          setSelectedSpriteDimension(command.data.dimensions[0].value);
+        }
+      }
     };
 
     worker.onCommand(handleCommand);
     
     // Load hotkey definitions
     setHotkeyDefinitions(hotkeyManager.definitions);
+    
+    // Load sprite dimensions
+    if (open) {
+      loadSpriteDimensions();
+    }
     
     // Listen for hotkey changes
     const handleHotkeyChanged = () => {
@@ -67,6 +102,7 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
     return () => {
       hotkeyManager.off('hotkey_changed', handleHotkeyChanged);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, worker]);
 
   const handleSave = async () => {
@@ -207,6 +243,47 @@ export const PreferencesDialog: React.FC<PreferencesDialogProps> = ({
                   />
                   Auto-save thing changes
                 </label>
+              </div>
+            </div>
+
+            <div className="preferences-section">
+              <h4>Sprite Settings</h4>
+              <div className="preferences-field">
+                <label>
+                  Default Sprite Dimension:
+                  <select
+                    value={selectedSpriteDimension}
+                    onChange={(e) => {
+                      const dimension = spriteDimensions.find(d => d.value === e.target.value);
+                      if (dimension) {
+                        setSelectedSpriteDimension(dimension.value);
+                        // Send command to set sprite dimension
+                        const command = CommandFactory.createSetSpriteDimensionCommand(
+                          dimension.value,
+                          dimension.size,
+                          dimension.dataSize
+                        );
+                        worker.sendCommand(command).catch(err => {
+                          console.error('Failed to set sprite dimension:', err);
+                        });
+                      }
+                    }}
+                    className="preferences-select"
+                  >
+                    {spriteDimensions.length === 0 ? (
+                      <option value="">Loading...</option>
+                    ) : (
+                      spriteDimensions.map((dim) => (
+                        <option key={dim.value} value={dim.value}>
+                          {dim.value} ({dim.size}x{dim.size})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+                <small className="preferences-hint">
+                  Default size for new sprites. This affects sprite import and creation.
+                </small>
               </div>
             </div>
           </>

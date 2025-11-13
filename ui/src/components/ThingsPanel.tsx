@@ -10,7 +10,7 @@ interface ThingsPanelProps {
 export const ThingsPanel: React.FC<ThingsPanelProps> = ({ onClose }) => {
   return (
     <Panel
-      title="Objects"
+      title="Things Panel"
       className="things-panel"
       onClose={onClose}
       collapsible={true}

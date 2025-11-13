@@ -312,7 +312,45 @@ export class ObjectBuilderWorker extends EventEmitter {
         const versionStorage = VersionStorage.getInstance();
         if (versionStorage.loaded) {
             const versions = versionStorage.getList();
+            console.log(`[ObjectBuilderWorker] Sending ${versions.length} versions`);
             this.sendCommand(new SetVersionsCommand(versions));
+        } else {
+            // Try to load versions from default location
+            console.log('[ObjectBuilderWorker] Versions not loaded, attempting to load...');
+            const path = require("path");
+            const fs = require("fs");
+            const possiblePaths = [
+                path.join(__dirname, "../../firstRun/versions.xml"),
+                path.join(__dirname, "../firstRun/versions.xml"),
+                path.join(__dirname, "../../src/firstRun/versions.xml"),
+                path.join(process.cwd(), "src/firstRun/versions.xml"),
+                path.join(process.cwd(), "firstRun/versions.xml"),
+            ];
+            
+            let versionsPath: string | null = null;
+            for (const possiblePath of possiblePaths) {
+                if (fs.existsSync(possiblePath)) {
+                    versionsPath = possiblePath;
+                    break;
+                }
+            }
+            
+            if (versionsPath) {
+                try {
+                    versionStorage.load(versionsPath);
+                    const versions = versionStorage.getList();
+                    console.log(`[ObjectBuilderWorker] Loaded and sending ${versions.length} versions`);
+                    this.sendCommand(new SetVersionsCommand(versions));
+                } catch (error: any) {
+                    console.error('[ObjectBuilderWorker] Failed to load versions:', error);
+                    // Send empty list so UI doesn't hang
+                    this.sendCommand(new SetVersionsCommand([]));
+                }
+            } else {
+                console.warn('[ObjectBuilderWorker] versions.xml not found, sending empty list');
+                // Send empty list so UI doesn't hang
+                this.sendCommand(new SetVersionsCommand([]));
+            }
         }
     }
 
@@ -386,7 +424,7 @@ export class ObjectBuilderWorker extends EventEmitter {
 
     private loadFilesCallback(datFile: string,
                              sprFile: string,
-                             version: Version,
+                             version: Version | null,
                              extended: boolean,
                              transparency: boolean,
                              improvedAnimations: boolean,
@@ -399,11 +437,32 @@ export class ObjectBuilderWorker extends EventEmitter {
             throw new Error("sprFile cannot be null or empty");
         }
 
-        if (!version) {
-            throw new Error("version cannot be null");
-        }
-
         this.unloadFilesCallback();
+
+        // Auto-detect version from file signatures if not provided
+        if (!version) {
+            console.log('[ObjectBuilderWorker] Version not provided, auto-detecting from file signatures...');
+            const fs = require("fs");
+            try {
+                // Read DAT signature (first 4 bytes)
+                const datBuffer = fs.readFileSync(datFile, { start: 0, end: 3 });
+                const datSignature = datBuffer.readUInt32LE(0);
+                
+                // Read SPR signature (first 4 bytes)
+                const sprBuffer = fs.readFileSync(sprFile, { start: 0, end: 3 });
+                const sprSignature = sprBuffer.readUInt32LE(0);
+                
+                console.log(`[ObjectBuilderWorker] File signatures: dat=0x${datSignature.toString(16)}, spr=0x${sprSignature.toString(16)}`);
+                
+                version = VersionStorage.getInstance().getBySignatures(datSignature, sprSignature);
+                if (!version) {
+                    throw new Error(`No version found with signatures dat=0x${datSignature.toString(16)}, spr=0x${sprSignature.toString(16)}. Please ensure versions.xml is loaded.`);
+                }
+                console.log(`[ObjectBuilderWorker] Auto-detected version: ${version.valueStr} (${version.value})`);
+            } catch (error: any) {
+                throw new Error(`Failed to auto-detect version: ${error.message}`);
+            }
+        }
 
         this._datFile = datFile;
         this._sprFile = sprFile;
@@ -418,13 +477,17 @@ export class ObjectBuilderWorker extends EventEmitter {
         // Load things and sprites
         // Note: load() is synchronous, so we need to check if both are loaded
         // and manually trigger clientLoadComplete if events don't fire
+        console.log('[ObjectBuilderWorker] Loading things and sprites...');
         this._things!.load(this._datFile, this._version, this._extended, this._improvedAnimations, this._frameGroups);
         this._sprites!.load(this._sprFile, this._version, this._extended, this._transparency);
+        
+        console.log(`[ObjectBuilderWorker] After load: things.loaded=${this._things!.loaded}, sprites.loaded=${this._sprites!.loaded}, clientLoaded=${this.clientLoaded}`);
         
         // If both storages are already loaded (synchronous load),
         // manually trigger clientLoadComplete
         // The storageLoadHandler will also handle this, but this ensures it happens
         if (this._things!.loaded && this._sprites!.loaded && this.clientLoaded) {
+            console.log('[ObjectBuilderWorker] Both loaded synchronously, calling clientLoadComplete');
             // Use setImmediate to ensure this happens after any event handlers
             setImmediate(() => {
                 this.clientLoadComplete();
@@ -837,6 +900,8 @@ export class ObjectBuilderWorker extends EventEmitter {
 
         loader.on("error", (error: Error) => {
             this.sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+            const { Logger } = require("../utils/Logger");
+            Logger.error("Error importing things", error, "ObjectBuilderWorker:importThingsCallback");
             console.error(error);
         });
 
@@ -913,6 +978,8 @@ export class ObjectBuilderWorker extends EventEmitter {
         });
 
         helper.on("error", (error: Error) => {
+            const { Logger } = require("../utils/Logger");
+            Logger.error("Error exporting thing", error, "ObjectBuilderWorker:exportThingCallback");
             console.error(error);
             this.sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
         });
@@ -1038,6 +1105,8 @@ export class ObjectBuilderWorker extends EventEmitter {
 
         loader.on("error", (error: Error) => {
             this.sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+            const { Logger } = require("../utils/Logger");
+            Logger.error("Error importing things", error, "ObjectBuilderWorker:importThingsCallback");
             console.error(error);
         });
 
@@ -1454,6 +1523,10 @@ export class ObjectBuilderWorker extends EventEmitter {
 
         loader.on("error", (error: Error) => {
             this.sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+            const { Logger } = require("../utils/Logger");
+            Logger.error("Sprite import error", error, "ObjectBuilderWorker:importSpritesCallback", {
+                ...loadSettings
+            });
             console.error("Sprite import error:", error);
             console.error("Error details:", {
                 message: error.message,
@@ -1561,6 +1634,8 @@ export class ObjectBuilderWorker extends EventEmitter {
 
         loader.on("error", (error: Error) => {
             this.sendCommand(new HideProgressBarCommand(ProgressBarID.DEFAULT));
+            const { Logger } = require("../utils/Logger");
+            Logger.error("Error importing things", error, "ObjectBuilderWorker:importThingsCallback");
             console.error(error);
         });
 
@@ -1668,6 +1743,8 @@ export class ObjectBuilderWorker extends EventEmitter {
         const last = this._things.getMaxId(category);
         const length = selectedIds.length;
 
+        console.log(`[ObjectBuilderWorker] sendThingList: category=${category}, first=${first}, last=${last}, selectedIds=${selectedIds.join(',')}`);
+
         if (length > 1) {
             selectedIds.sort((a, b) => b - a); // DESCENDING
             if (selectedIds[length - 1] > last) {
@@ -1680,6 +1757,8 @@ export class ObjectBuilderWorker extends EventEmitter {
         const diff = (category !== ThingCategory.ITEM && min === first) ? 1 : 0;
         const max = Math.min((min - diff) + (this._thingListAmount - 1), last);
         const list: ThingListItem[] = [];
+
+        console.log(`[ObjectBuilderWorker] sendThingList: min=${min}, max=${max}, range=${max - min + 1}`);
 
         for (let i = min; i <= max; i++) {
             const thing = this._things.getThingType(i, category);
@@ -1697,6 +1776,7 @@ export class ObjectBuilderWorker extends EventEmitter {
             list.push(listItem);
         }
 
+        console.log(`[ObjectBuilderWorker] sendThingList: sending ${list.length} items`);
         this.sendCommand(new SetThingListCommand(selectedIds, list));
     }
 
@@ -1884,10 +1964,13 @@ export class ObjectBuilderWorker extends EventEmitter {
     }
 
     private clientLoadComplete(): void {
+        console.log('[ObjectBuilderWorker] clientLoadComplete called');
         this.sendClientInfo();
+        console.log('[ObjectBuilderWorker] Sending thing list...');
         this.sendThingList([ThingTypeStorage.MIN_ITEM_ID], ThingCategory.ITEM);
         this.sendThingData(ThingTypeStorage.MIN_ITEM_ID, ThingCategory.ITEM);
         this.sendSpriteList([0]);
+        console.log('[ObjectBuilderWorker] clientLoadComplete finished');
     }
 
     private clientCompileComplete(): void {
@@ -1900,7 +1983,9 @@ export class ObjectBuilderWorker extends EventEmitter {
     //--------------------------------------
 
     private storageLoadHandler(event: StorageEvent): void {
+        console.log(`[ObjectBuilderWorker] storageLoadHandler: target=${event.target?.constructor?.name}, things.loaded=${this._things?.loaded}, sprites.loaded=${this._sprites?.loaded}, clientLoaded=${this.clientLoaded}`);
         if ((event.target === this._things || event.target === this._sprites) && this.clientLoaded) {
+            console.log('[ObjectBuilderWorker] Both storages loaded, calling clientLoadComplete');
             this.clientLoadComplete();
         }
     }
@@ -1915,6 +2000,8 @@ export class ObjectBuilderWorker extends EventEmitter {
 
     private thingsErrorHandler(error: Error): void {
         // TODO: Handle errors, potentially retry with extended mode
+        const { Logger } = require("../utils/Logger");
+        Logger.error("Things loading error", error, "ObjectBuilderWorker:thingsErrorHandler");
         console.error("Things error:", error);
     }
 
@@ -1924,6 +2011,8 @@ export class ObjectBuilderWorker extends EventEmitter {
 
     private spritesErrorHandler(error: Error): void {
         // TODO: Handle sprite errors
+        const { Logger } = require("../utils/Logger");
+        Logger.error("Sprites loading error", error, "ObjectBuilderWorker:spritesErrorHandler");
         console.error("Sprites error:", error);
     }
 }

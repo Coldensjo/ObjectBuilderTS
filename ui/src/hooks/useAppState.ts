@@ -57,11 +57,14 @@ export const useAppState = () => {
     const handleCommand = (command: any) => {
       // Handle different command types
       if (command.type === 'SetClientInfoCommand') {
+        console.log('[useAppState] Received SetClientInfoCommand:', command);
+        console.log('[useAppState] clientInfo.loaded:', command.data?.loaded);
         setState(prev => ({
           ...prev,
           clientInfo: command.data,
         }));
       } else if (command.type === 'SetThingListCommand') {
+        console.log('[useAppState] Received SetThingListCommand:', command);
         // Update selected thing IDs
         setState(prev => ({
           ...prev,

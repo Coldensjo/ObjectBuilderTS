@@ -18,8 +18,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 260px;
-  max-width: 300px;
+  min-width: 320px;
+  width: 320px;
+  max-width: 400px;
   overflow: hidden;
 }
 
@@ -28,5 +29,45 @@
   display: flex;
   overflow: hidden;
   gap: 4px;
+}
+
+.object-viewer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.object-viewer-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #494949;
+}
+
+.object-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #3a3a3a;
+  border-bottom: 1px solid #272727;
+}
+
+.object-viewer-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.object-viewer-content-wrapper {
+  flex: 1;
+  overflow: hidden;
 }
 

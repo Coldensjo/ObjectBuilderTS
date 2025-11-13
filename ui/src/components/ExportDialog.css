@@ -169,3 +169,11 @@
   color: #ffc107;
 }
 
+.export-hint {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  display: block;
+  font-style: italic;
+}
+

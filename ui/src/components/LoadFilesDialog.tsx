@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from './Button';
 import { useWorker } from '../contexts/WorkerContext';
 import { CommandFactory } from '../services/CommandFactory';
+import { useToast } from '../hooks/useToast';
 import './LoadFilesDialog.css';
 
 interface Version {
@@ -35,9 +36,13 @@ export const LoadFilesDialog: React.FC<LoadFilesDialogProps> = ({
   sprFile,
 }) => {
   const worker = useWorker();
+  const { showError } = useToast();
   const [versions, setVersions] = useState<Version[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<Version | null>(null);
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<{dat?: string; spr?: string}>({});
+  const versionsReceivedRef = useRef(false);
   const [options, setOptions] = useState({
     extended: false,
     transparency: false,
@@ -56,9 +61,19 @@ export const LoadFilesDialog: React.FC<LoadFilesDialogProps> = ({
     const handleCommand = (command: any) => {
       // Listen for any command that might contain versions
       // Versions might be sent via a SetVersionsCommand or similar
-      if (command.type === 'SetVersionsCommand' && command.data && command.data.versions) {
-        setVersions(command.data.versions);
-        setLoading(false);
+      if (command.type === 'SetVersionsCommand') {
+        console.log('[LoadFilesDialog] Received SetVersionsCommand:', command);
+        versionsReceivedRef.current = true;
+        // Versions can be in command.data.versions or command.versions
+        const versionsList = command.data?.versions || command.versions || [];
+        if (versionsList.length > 0) {
+          console.log('[LoadFilesDialog] Setting versions:', versionsList.length);
+          setVersions(versionsList);
+          setLoading(false);
+        } else {
+          console.warn('[LoadFilesDialog] SetVersionsCommand received but no versions found');
+          setLoading(false);
+        }
       }
     };
 
@@ -67,24 +82,107 @@ export const LoadFilesDialog: React.FC<LoadFilesDialogProps> = ({
 
   const loadVersions = async () => {
     setLoading(true);
+    versionsReceivedRef.current = false;
     try {
       // Request versions list from backend
       const command = CommandFactory.createGetVersionsListCommand();
       await worker.sendCommand(command);
       // Versions will be received via SetVersionsCommand in the useEffect listener
+      
+      // Set a timeout to stop loading after 5 seconds if no response
+      setTimeout(() => {
+        if (!versionsReceivedRef.current) {
+          console.warn('[LoadFilesDialog] Timeout waiting for versions, continuing with empty list');
+          setLoading(false);
+        }
+      }, 5000);
     } catch (error) {
       console.error('Failed to load versions:', error);
       setLoading(false);
     }
   };
 
-  const handleLoad = () => {
+  const validateFiles = async (): Promise<boolean> => {
+    setValidating(true);
+    setValidationErrors({});
+    
+    try {
+      const fs = (window as any).require ? (window as any).require('fs') : null;
+      if (!fs) {
+        // Can't validate without fs, but continue anyway
+        setValidating(false);
+        return true;
+      }
+
+      const errors: {dat?: string; spr?: string} = {};
+
+      // Validate DAT file
+      if (datFile) {
+        if (!fs.existsSync(datFile)) {
+          errors.dat = 'File does not exist';
+        } else {
+          const stats = fs.statSync(datFile);
+          if (stats.size === 0) {
+            errors.dat = 'File is empty';
+          } else if (!datFile.toLowerCase().endsWith('.dat')) {
+            errors.dat = 'Not a DAT file';
+          }
+        }
+      }
+
+      // Validate SPR file
+      if (sprFile) {
+        if (!fs.existsSync(sprFile)) {
+          errors.spr = 'File does not exist';
+        } else {
+          const stats = fs.statSync(sprFile);
+          if (stats.size === 0) {
+            errors.spr = 'File is empty';
+          } else if (!sprFile.toLowerCase().endsWith('.spr')) {
+            errors.spr = 'Not an SPR file';
+          }
+        }
+      }
+
+      setValidationErrors(errors);
+      setValidating(false);
+
+      if (Object.keys(errors).length > 0) {
+        showError('File validation failed. Please check the selected files.');
+        return false;
+      }
+
+      return true;
+    } catch (error: any) {
+      setValidating(false);
+      showError(`Validation error: ${error.message}`);
+      return false;
+    }
+  };
+
+  const handleLoad = async () => {
+    console.log('[LoadFilesDialog] handleLoad called', { datFile, sprFile, selectedVersion, options });
+    
     if (!datFile || !sprFile) {
+      showError('Please select both DAT and SPR files');
+      return;
+    }
+
+    // Version can be null for auto-detect - that's allowed
+    // if (!selectedVersion) {
+    //   showError('Please select a version');
+    //   return;
+    // }
+
+    // Validate files before loading
+    const isValid = await validateFiles();
+    if (!isValid) {
       return;
     }
     
+    console.log('[LoadFilesDialog] Calling onLoad with:', { version: selectedVersion, ...options });
     onLoad({
-      version: selectedVersion,
+      version: selectedVersion, // Can be null for auto-detect
       ...options,
     });
     onClose();
@@ -120,34 +218,53 @@ export const LoadFilesDialog: React.FC<LoadFilesDialogProps> = ({
           <h4>Files</h4>
           <div className="load-files-field">
             <label>DAT File:</label>
-            <div className={`file-path ${datFile ? 'file-path-valid' : 'file-path-invalid'}`}>
+            <div className={`file-path ${datFile && !validationErrors.dat ? 'file-path-valid' : validationErrors.dat ? 'file-path-error' : 'file-path-invalid'}`}>
               {datFile ? (
                 <>
                   <span className="file-path-text" title={datFile}>
                     {datFile.split(/[/\\]/).pop() || datFile}
                   </span>
-                  <span className="file-path-icon">✓</span>
+                  {validationErrors.dat ? (
+                    <span className="file-path-icon error" title={validationErrors.dat}>⚠</span>
+                  ) : (
+                    <span className="file-path-icon">✓</span>
+                  )}
                 </>
               ) : (
                 <span className="file-path-placeholder">Not selected</span>
               )}
             </div>
+            {validationErrors.dat && (
+              <div className="file-error-message">{validationErrors.dat}</div>
+            )}
           </div>
           <div className="load-files-field">
             <label>SPR File:</label>
-            <div className={`file-path ${sprFile ? 'file-path-valid' : 'file-path-invalid'}`}>
+            <div className={`file-path ${sprFile && !validationErrors.spr ? 'file-path-valid' : validationErrors.spr ? 'file-path-error' : 'file-path-invalid'}`}>
               {sprFile ? (
                 <>
                   <span className="file-path-text" title={sprFile}>
                     {sprFile.split(/[/\\]/).pop() || sprFile}
                   </span>
-                  <span className="file-path-icon">✓</span>
+                  {validationErrors.spr ? (
+                    <span className="file-path-icon error" title={validationErrors.spr}>⚠</span>
+                  ) : (
+                    <span className="file-path-icon">✓</span>
+                  )}
                 </>
               ) : (
                 <span className="file-path-placeholder">Not selected</span>
               )}
             </div>
+            {validationErrors.spr && (
+              <div className="file-error-message">{validationErrors.spr}</div>
+            )}
           </div>
+          {validating && (
+            <div className="load-files-validating">
+              <p>Validating files...</p>
+            </div>
+          )}
         </div>
 
         <div className="load-files-section">

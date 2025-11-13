@@ -92,3 +92,32 @@
   color: var(--text-primary);
 }
 
+.context-menu {
+  position: fixed;
+  background-color: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 12px;
+  transition: background-color 0.1s;
+}
+
+.context-menu-item:hover {
+  background-color: #4a4a4a;
+}
+
+.context-menu-separator {
+  height: 1px;
+  background-color: #4a4a4a;
+  margin: 4px 0;
+}
+

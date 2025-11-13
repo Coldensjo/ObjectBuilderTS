@@ -26,5 +26,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeMenuActionListener: () => {
     ipcRenderer.removeAllListeners('menu-action');
   },
+  // Load OBD file for viewing
+  loadOBDFile: (filePath: string) => ipcRenderer.invoke('loadOBDFile', filePath),
+  // Get sprite dimensions list
+  getSpriteDimensions: () => ipcRenderer.invoke('getSpriteDimensions'),
 });
 

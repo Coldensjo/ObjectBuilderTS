@@ -47,11 +47,18 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
       let result;
       
       if (type === 'things') {
+        const defaultExt = format === 'obd' ? 'obd' : format;
         result = await fileDialog.showSaveDialog({
           title: 'Export Thing',
-          defaultPath: outputPath || 'thing.obd',
-          filters: [
+          defaultPath: outputPath || `thing.${defaultExt}`,
+          filters: format === 'obd' ? [
             { name: 'OBD Files', extensions: ['obd'] },
+            { name: 'All Files', extensions: ['*'] },
+          ] : [
+            { name: 'PNG Files', extensions: ['png'] },
+            { name: 'JPEG Files', extensions: ['jpg', 'jpeg'] },
+            { name: 'BMP Files', extensions: ['bmp'] },
+            { name: 'GIF Files', extensions: ['gif'] },
             { name: 'All Files', extensions: ['*'] },
           ],
         });
@@ -196,17 +203,47 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             </div>
             <div className="export-field">
               <label>
-                Sprite Sheet Flag:
-                <input
-                  type="number"
-                  value={spriteSheetFlag}
-                  onChange={(e) => setSpriteSheetFlag(parseInt(e.target.value) || 0)}
-                  min="0"
-                  max="3"
-                  className="export-input"
-                />
+                Export Format:
+                <select
+                  value={format}
+                  onChange={(e) => {
+                    const newFormat = e.target.value;
+                    setFormat(newFormat);
+                    if (newFormat === 'obd') {
+                      setOutputPath(outputPath.replace(/\.(png|jpg|jpeg|bmp|gif)$/i, '.obd'));
+                    } else {
+                      setOutputPath(outputPath.replace(/\.obd$/i, `.${newFormat}`));
+                    }
+                  }}
+                  className="export-select"
+                >
+                  <option value="obd">OBD (Object Builder Data)</option>
+                  <option value="png">PNG (Sprite Sheet)</option>
+                  <option value="jpeg">JPEG (Sprite Sheet)</option>
+                  <option value="bmp">BMP (Sprite Sheet)</option>
+                  <option value="gif">GIF (Sprite Sheet)</option>
+                </select>
               </label>
             </div>
+            {format !== 'obd' && (
+              <div className="export-field">
+                <label>
+                  Sprite Sheet Pattern Flag:
+                  <input
+                    type="number"
+                    value={spriteSheetFlag}
+                    onChange={(e) => setSpriteSheetFlag(parseInt(e.target.value) || 0)}
+                    min="0"
+                    max="3"
+                    className="export-input"
+                    title="0 = None, 1 = X, 2 = Y, 3 = X+Y"
+                  />
+                </label>
+                <small className="export-hint">
+                  When non-zero, exports pattern information as .txt file alongside the sprite sheet
+                </small>
+              </div>
+            )}
           </div>
         )}
 
