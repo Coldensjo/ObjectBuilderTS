@@ -1,7 +1,7 @@
 {
-  "name": "ironcore-object-builder",
+  "name": "object-builder",
   "version": "1.0.0",
-  "description": "Object Builder for Ironcore - TypeScript version",
+  "description": "ObjectBuilder TypeScript",
   "main": "dist/electron/electron/main.js",
   "scripts": {
     "build": "npm run build:backend && npm run build:ui && npm run build:electron",

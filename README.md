@@ -50,7 +50,7 @@ npm run dev:electron
 ## 📁 Project Structure
 
 ```
-ironcore-object-builder/
+object-builder/
 ├── actionscript-blueprint/ # ⚠️ ORIGINAL ACTIONSCRIPT CODE (Reference Only)
 │   └── README.md          # See this folder's README for details
 ├── src/                    # Backend TypeScript code

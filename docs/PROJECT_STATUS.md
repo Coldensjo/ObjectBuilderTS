@@ -1,4 +1,4 @@
-# Ironcore Object Builder - Project Status
+# ObjectBuilder - Project Status
 
 ## 🎯 Overall Progress: ~95% Complete
 
@@ -59,7 +59,7 @@
 ## 📁 Project Structure
 
 ```
-ironcore-object-builder/
+object-builder/
 ├── src/                    # Backend TypeScript code
 │   ├── main.ts            # Application entry point
 │   ├── cli.ts             # CLI interface

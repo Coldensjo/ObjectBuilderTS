@@ -22,7 +22,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({ open, onClose }) => {
     >
       <div className="about-content">
         <div className="about-header">
-          <h3>Ironcore Object Builder</h3>
+          <h3>ObjectBuilder</h3>
           <p className="version">Version 1.0.0</p>
         </div>
         <div className="about-body">
