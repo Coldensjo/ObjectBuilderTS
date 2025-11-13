@@ -155,17 +155,17 @@ const MainWindowContent: React.FC = () => {
 
   return (
     <>
-      <div className="main-window">
+      <div className="main-window" title="MainWindow component">
         <Toolbar />
-        <div className="main-content">
-          <div className="main-left-sidebar">
+        <div className="main-content" title="main-content">
+          <div className="main-left-sidebar" title="main-left-sidebar">
             {showPreviewPanel && (
               <PreviewPanel
                 onClose={() => setShowPreviewPanel(false)}
               />
             )}
           </div>
-          <div className="main-editor-area">
+          <div className="main-editor-area" title="main-editor-area">
             {showThingsPanel && (
               <ThingsPanel
                 onClose={() => setShowThingsPanel(false)}
@@ -327,30 +327,30 @@ const MainWindowContent: React.FC = () => {
         onClose={() => setShowLogWindow(false)}
       />
       {showObjectViewer && (
-        <div className="object-viewer-overlay">
-          <div className="object-viewer-container">
-            <div className="object-viewer-header">
-              <h2>Object Viewer</h2>
+        <div className="object-viewer-overlay" title="object-viewer-overlay">
+          <div className="object-viewer-container" title="object-viewer-container">
+            <div className="object-viewer-header" title="object-viewer-header">
+              <h2 title="h2">Object Viewer</h2>
               <Button variant="secondary" onClick={() => setShowObjectViewer(false)}>
                 Close
               </Button>
             </div>
-            <div className="object-viewer-content-wrapper">
+            <div className="object-viewer-content-wrapper" title="object-viewer-content-wrapper">
               <ObjectViewer onClose={() => setShowObjectViewer(false)} />
             </div>
           </div>
         </div>
       )}
       {showAnimationEditor && (
-        <div className="object-viewer-overlay">
-          <div className="object-viewer-container">
-            <div className="object-viewer-header">
-              <h2>Animation Editor</h2>
+        <div className="object-viewer-overlay" title="object-viewer-overlay">
+          <div className="object-viewer-container" title="object-viewer-container">
+            <div className="object-viewer-header" title="object-viewer-header">
+              <h2 title="h2">Animation Editor</h2>
               <Button variant="secondary" onClick={() => setShowAnimationEditor(false)}>
                 Close
               </Button>
             </div>
-            <div className="object-viewer-content-wrapper">
+            <div className="object-viewer-content-wrapper" title="object-viewer-content-wrapper">
               <AnimationEditor onClose={() => setShowAnimationEditor(false)} />
             </div>
           </div>

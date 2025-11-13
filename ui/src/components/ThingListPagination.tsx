@@ -102,12 +102,12 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 	};
 
 	return (
-		<div className="thing-list-pagination">
+		<div className="thing-list-pagination" title="ThingListPagination component">
 			<button
 				className="thing-list-pagination-button"
 				onClick={goToFirst}
 				disabled={disabled || !canGoPrevious}
-				title="First page"
+				title="thing-list-pagination-button (First page)"
 			>
 				««
 			</button>
@@ -115,7 +115,7 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 				className="thing-list-pagination-button"
 				onClick={goToPrevious}
 				disabled={disabled || !canGoPrevious}
-				title={`Previous ${pageSize} items`}
+				title={`thing-list-pagination-button (Previous ${pageSize} items)`}
 			>
 				«
 			</button>
@@ -123,7 +123,7 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 				className="thing-list-pagination-button"
 				onClick={handleDecrement}
 				disabled={disabled || pagination.currentMin <= pagination.minId}
-				title="Previous item"
+				title="thing-list-pagination-button (Previous item)"
 			>
 				‹
 			</button>
@@ -135,13 +135,13 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 				onKeyDown={handleInputKeyDown}
 				onBlur={handleInputSubmit}
 				disabled={disabled}
-				title={`Enter ID (${pagination.minId}-${pagination.maxId})`}
+				title={`thing-list-pagination-input (Enter ID ${pagination.minId}-${pagination.maxId})`}
 			/>
 			<button
 				className="thing-list-pagination-button"
 				onClick={handleIncrement}
 				disabled={disabled || pagination.currentMin >= pagination.maxId}
-				title="Next item"
+				title="thing-list-pagination-button (Next item)"
 			>
 				›
 			</button>
@@ -149,7 +149,7 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 				className="thing-list-pagination-button"
 				onClick={goToNext}
 				disabled={disabled || !canGoNext}
-				title={`Next ${pageSize} items`}
+				title={`thing-list-pagination-button (Next ${pageSize} items)`}
 			>
 				»
 			</button>
@@ -157,7 +157,7 @@ export const ThingListPagination: React.FC<ThingListPaginationProps> = ({
 				className="thing-list-pagination-button"
 				onClick={goToLast}
 				disabled={disabled || !canGoNext}
-				title="Last page"
+				title="thing-list-pagination-button (Last page)"
 			>
 				»»
 			</button>

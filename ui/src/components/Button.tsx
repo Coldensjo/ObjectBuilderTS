@@ -26,7 +26,7 @@ export const Button: React.FC<ButtonProps> = ({
       className={`button button-${variant} button-${size}`}
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      title={title || `Button component (${variant}, ${size})`}
     >
       {children}
     </button>

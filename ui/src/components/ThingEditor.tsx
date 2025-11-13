@@ -149,9 +149,9 @@ export const ThingEditor: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="thing-editor">
-        <div className="editor-content">
-          <p>Loading...</p>
+      <div className="thing-editor" title="ThingEditor component">
+        <div className="editor-content" title="editor-content">
+          <p title="p">Loading...</p>
         </div>
       </div>
     );
@@ -159,60 +159,63 @@ export const ThingEditor: React.FC = () => {
 
   if (!thingData) {
     return (
-      <div className="thing-editor">
-        <div className="editor-content">
-          <p className="placeholder-text">Select a thing to edit</p>
+      <div className="thing-editor" title="ThingEditor component">
+        <div className="editor-content" title="editor-content">
+          <p className="placeholder-text" title="placeholder-text">Select a thing to edit</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="thing-editor">
-      <div className="editor-header">
-        <h3>Thing #{thingData.id}</h3>
+    <div className="thing-editor" title="ThingEditor component">
+      <div className="editor-header" title="editor-header">
+        <h3 title="h3">Thing #{thingData.id}</h3>
         <button 
           className="save-button" 
           onClick={() => handleSave()}
           disabled={saving || !hasChanges()}
+          title="save-button"
         >
           {saving ? 'Saving...' : hasChanges() ? 'Save' : 'Saved'}
         </button>
       </div>
-      <div className="editor-content">
-        <div className="editor-section">
-          <h4>Basic Properties</h4>
-          <div className="form-group">
-            <label>ID:</label>
-            <input type="number" value={thingData.id} disabled />
+      <div className="editor-content" title="editor-content">
+        <div className="editor-section" title="editor-section">
+          <h4 title="h4">Basic Properties</h4>
+          <div className="form-group" title="form-group">
+            <label title="label">ID:</label>
+            <input type="number" value={thingData.id} disabled title="input[type=number] (ID)" />
           </div>
-          <div className="form-group">
-            <label>Category:</label>
-            <input type="text" value={thingData.category} disabled />
+          <div className="form-group" title="form-group">
+            <label title="label">Category:</label>
+            <input type="text" value={thingData.category} disabled title="input[type=text] (Category)" />
           </div>
         </div>
 
-        <div className="editor-section">
-          <h4>Ground Properties</h4>
-          <div className="form-group checkbox-group">
-            <label>
+        <div className="editor-section" title="editor-section">
+          <h4 title="h4">Ground Properties</h4>
+          <div className="form-group checkbox-group" title="form-group checkbox-group">
+            <label title="label">
               <input
                 type="checkbox"
                 checked={formData.isGround || false}
                 onChange={(e) => handleFieldChange('isGround', e.target.checked)}
+                title="input[type=checkbox] (Is Ground)"
               />
               Is Ground
             </label>
           </div>
           {formData.isGround && (
-            <div className="form-group">
-              <label>Ground Speed:</label>
+            <div className="form-group" title="form-group">
+              <label title="label">Ground Speed:</label>
               <input
                 type="number"
                 value={formData.groundSpeed || 0}
                 onChange={(e) => handleFieldChange('groundSpeed', parseInt(e.target.value) || 0)}
                 min="0"
                 max="1000"
+                title="input[type=number] (Ground Speed)"
               />
             </div>
           )}

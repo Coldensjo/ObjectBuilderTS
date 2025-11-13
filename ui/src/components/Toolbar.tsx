@@ -435,58 +435,58 @@ export const Toolbar: React.FC = () => {
 
   return (
     <>
-      <div className="toolbar">
-        <div className="toolbar-section">
-          <button className="toolbar-button" title="New Project" onClick={handleNew}>
-            <span>New</span>
+      <div className="toolbar" title="Toolbar component">
+        <div className="toolbar-section" title="toolbar-section">
+          <button className="toolbar-button" title="toolbar-button (New Project)" onClick={handleNew}>
+            <span title="span">New</span>
           </button>
-          <button className="toolbar-button" title="Open Project" onClick={handleOpen}>
-            <span>Open</span>
+          <button className="toolbar-button" title="toolbar-button (Open Project)" onClick={handleOpen}>
+            <span title="span">Open</span>
           </button>
-          <button className="toolbar-button" title="Save Project" disabled>
-            <span>Save</span>
+          <button className="toolbar-button" title="toolbar-button (Save Project)" disabled>
+            <span title="span">Save</span>
           </button>
           <button 
             className="toolbar-button" 
-            title="Unload Project" 
+            title="toolbar-button (Unload Project)" 
             onClick={handleUnload}
             disabled={!clientLoaded}
           >
-            <span>Unload</span>
+            <span title="span">Unload</span>
           </button>
-          <div className="toolbar-separator" />
-          <button className="toolbar-button" title="Compile" onClick={handleCompile}>
-            <span>Compile</span>
+          <div className="toolbar-separator" title="toolbar-separator" />
+          <button className="toolbar-button" title="toolbar-button (Compile)" onClick={handleCompile}>
+            <span title="span">Compile</span>
           </button>
         </div>
-        <div className="toolbar-section">
+        <div className="toolbar-section" title="toolbar-section">
           <button
             className={`toolbar-button ${currentCategory === ThingCategory.ITEM ? 'active' : ''}`}
-            title="Items"
+            title="toolbar-button (Items category)"
             onClick={() => handleCategoryChange(ThingCategory.ITEM)}
           >
-            <span>Items</span>
+            <span title="span">Items</span>
           </button>
           <button
             className={`toolbar-button ${currentCategory === ThingCategory.OUTFIT ? 'active' : ''}`}
-            title="Outfits"
+            title="toolbar-button (Outfits category)"
             onClick={() => handleCategoryChange(ThingCategory.OUTFIT)}
           >
-            <span>Outfits</span>
+            <span title="span">Outfits</span>
           </button>
           <button
             className={`toolbar-button ${currentCategory === ThingCategory.EFFECT ? 'active' : ''}`}
-            title="Effects"
+            title="toolbar-button (Effects category)"
             onClick={() => handleCategoryChange(ThingCategory.EFFECT)}
           >
-            <span>Effects</span>
+            <span title="span">Effects</span>
           </button>
           <button
             className={`toolbar-button ${currentCategory === ThingCategory.MISSILE ? 'active' : ''}`}
-            title="Missiles"
+            title="toolbar-button (Missiles category)"
             onClick={() => handleCategoryChange(ThingCategory.MISSILE)}
           >
-            <span>Missiles</span>
+            <span title="span">Missiles</span>
           </button>
         </div>
       </div>

@@ -106,13 +106,14 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
       onClose={onClose}
       collapsible={true}
     >
-        <div className="preview-container">
+        <div className="preview-container" title="PreviewPanel component">
           {thingData ? (
             <>
               <div 
                 className="preview-canvas-section"
                 ref={canvasSectionRef}
                 onWheel={handleWheel}
+                title="preview-canvas-section"
               >
                 <PreviewCanvas
                   thingData={thingData}
@@ -128,27 +129,27 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                   showAllPatterns={showAllPatterns}
                 />
                 {/* Zoom controls */}
-                <div className="preview-zoom-controls">
+                <div className="preview-zoom-controls" title="preview-zoom-controls">
                   <button 
                     onClick={handleZoomOut}
                     disabled={zoom <= 0.25}
-                    title="Zoom Out (Ctrl+Wheel)"
+                    title="preview-zoom-btn (Zoom Out - Ctrl+Wheel)"
                     className="preview-zoom-btn"
                   >
                     −
                   </button>
-                  <span className="preview-zoom-value">{Math.round(zoom * 100)}%</span>
+                  <span className="preview-zoom-value" title="preview-zoom-value">{Math.round(zoom * 100)}%</span>
                   <button 
                     onClick={handleZoomIn}
                     disabled={zoom >= 4}
-                    title="Zoom In (Ctrl+Wheel)"
+                    title="preview-zoom-btn (Zoom In - Ctrl+Wheel)"
                     className="preview-zoom-btn"
                   >
                     +
                   </button>
                   <button 
                     onClick={handleZoomReset}
-                    title="Reset Zoom"
+                    title="preview-zoom-btn (Reset Zoom)"
                     className="preview-zoom-btn"
                   >
                     ⟲
@@ -157,21 +158,21 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
               </div>
               {/* Sprite Info */}
               {frameGroup && (
-                <div className="preview-info">
-                  <div className="preview-info-item">
-                    <span className="preview-info-label">Sprites:</span>
-                    <span className="preview-info-value">{spriteCount}</span>
+                <div className="preview-info" title="preview-info">
+                  <div className="preview-info-item" title="preview-info-item">
+                    <span className="preview-info-label" title="preview-info-label">Sprites:</span>
+                    <span className="preview-info-value" title="preview-info-value">{spriteCount}</span>
                   </div>
-                  <div className="preview-info-item">
-                    <span className="preview-info-label">Size:</span>
-                    <span className="preview-info-value">
+                  <div className="preview-info-item" title="preview-info-item">
+                    <span className="preview-info-label" title="preview-info-label">Size:</span>
+                    <span className="preview-info-value" title="preview-info-value">
                       {frameGroup.width || 1}×{frameGroup.height || 1}
                     </span>
                   </div>
                   {totalFrames > 1 && (
-                    <div className="preview-info-item">
-                      <span className="preview-info-label">Frames:</span>
-                      <span className="preview-info-value">
+                    <div className="preview-info-item" title="preview-info-item">
+                      <span className="preview-info-label" title="preview-info-label">Frames:</span>
+                      <span className="preview-info-value" title="preview-info-value">
                         {currentFrame + 1} / {totalFrames}
                       </span>
                     </div>
@@ -179,10 +180,10 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                 </div>
               )}
 
-              <div className="preview-controls">
+              <div className="preview-controls" title="preview-controls">
                 {availableFrameGroups.length > 1 && (
-                  <div className="preview-control-group">
-                    <label>Frame Group:</label>
+                  <div className="preview-control-group" title="preview-control-group">
+                    <label title="label">Frame Group:</label>
                     <select
                       value={frameGroupType}
                       onChange={(e) => {
@@ -193,6 +194,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                         setPatternY(0);
                         setPatternZ(0);
                       }}
+                      title="select (Frame Group selector)"
                     >
                       {availableFrameGroups.map((fg) => (
                         <option key={fg.type} value={fg.type}>
@@ -206,13 +208,13 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                   <>
                     {/* Frame Navigation */}
                     {totalFrames > 1 && !animate && (
-                      <div className="preview-control-group">
-                        <label>Frame:</label>
-                        <div className="preview-frame-controls">
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">Frame:</label>
+                        <div className="preview-frame-controls" title="preview-frame-controls">
                           <button 
                             onClick={handlePreviousFrame}
                             className="preview-frame-btn"
-                            title="Previous Frame"
+                            title="preview-frame-btn (Previous Frame)"
                           >
                             ◀
                           </button>
@@ -226,11 +228,12 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                               setCurrentFrame(Math.max(0, Math.min(frame, totalFrames - 1)));
                             }}
                             className="preview-frame-input"
+                            title="preview-frame-input (Frame number input)"
                           />
                           <button 
                             onClick={handleNextFrame}
                             className="preview-frame-btn"
-                            title="Next Frame"
+                            title="preview-frame-btn (Next Frame)"
                           >
                             ▶
                           </button>
@@ -239,8 +242,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                     )}
                     {/* Pattern Controls with Sliders */}
                     {!showAllPatterns && frameGroup.patternX > 1 && (
-                      <div className="preview-control-group">
-                        <label>
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">
                           Pattern X: {patternX} / {frameGroup.patternX - 1}
                         </label>
                         <input
@@ -250,12 +253,13 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                           value={patternX}
                           onChange={(e) => setPatternX(parseInt(e.target.value) || 0)}
                           className="preview-pattern-slider"
+                          title="preview-pattern-slider (Pattern X slider)"
                         />
                       </div>
                     )}
                     {!showAllPatterns && frameGroup.patternY > 1 && (
-                      <div className="preview-control-group">
-                        <label>
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">
                           Pattern Y: {patternY} / {frameGroup.patternY - 1}
                         </label>
                         <input
@@ -265,12 +269,13 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                           value={patternY}
                           onChange={(e) => setPatternY(parseInt(e.target.value) || 0)}
                           className="preview-pattern-slider"
+                          title="preview-pattern-slider (Pattern Y slider)"
                         />
                       </div>
                     )}
                     {frameGroup.patternZ > 1 && (
-                      <div className="preview-control-group">
-                        <label>
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">
                           Pattern Z: {patternZ} / {frameGroup.patternZ - 1}
                         </label>
                         <input
@@ -281,12 +286,13 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                           onChange={(e) => setPatternZ(parseInt(e.target.value) || 0)}
                           className="preview-pattern-slider"
                           disabled={showAllPatterns}
+                          title="preview-pattern-slider (Pattern Z slider)"
                         />
                       </div>
                     )}
                     {hasAnimation && (
-                      <div className="preview-control-group">
-                        <label>
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">
                           <input
                             type="checkbox"
                             checked={animate}
@@ -296,6 +302,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                                 setCurrentFrame(0);
                               }
                             }}
+                            title="input[type=checkbox] (Animate checkbox)"
                           />
                           {' '}Animate
                         </label>
@@ -303,14 +310,15 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
                     )}
                     {/* Show All Patterns Toggle */}
                     {frameGroup && (frameGroup.patternX > 1 || frameGroup.patternY > 1) && (
-                      <div className="preview-control-group">
-                        <label>
+                      <div className="preview-control-group" title="preview-control-group">
+                        <label title="label">
                           <input
                             type="checkbox"
                             checked={showAllPatterns}
                             onChange={(e) => {
                               setShowAllPatterns(e.target.checked);
                             }}
+                            title="input[type=checkbox] (Show All Patterns checkbox)"
                           />
                           {' '}Show All Patterns
                         </label>
@@ -321,8 +329,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ onClose }) => {
               </div>
             </>
           ) : (
-            <div className="preview-placeholder">
-              <p>Select a thing to preview</p>
+            <div className="preview-placeholder" title="preview-placeholder">
+              <p title="p">Select a thing to preview</p>
             </div>
           )}
         </div>
