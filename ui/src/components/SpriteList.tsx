@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useWorker } from '../contexts/WorkerContext';
 import { useAppStateContext } from '../contexts/AppStateContext';
 import { CommandFactory } from '../services/CommandFactory';
@@ -79,68 +79,11 @@ export const SpriteList: React.FC = () => {
   // Track last loaded thing to prevent duplicate reloads
   const lastThingRef = useRef<{ id: number; category: string } | null>(null);
   
-  // Load sprite list when thing is selected
-  useEffect(() => {
-    const handleCommand = (command: any) => {
-      if (command.type === 'SetThingDataCommand') {
-        // Extract sprite IDs from thing data
-        const thingData = command.data;
-        if (thingData && thingData.thing) {
-          const thingId = thingData.thing.id;
-          const thingCategory = thingData.thing.category;
-          
-          // Prevent reloading if it's the same thing and category
-          if (lastThingRef.current && 
-              lastThingRef.current.id === thingId && 
-              lastThingRef.current.category === thingCategory) {
-            return;
-          }
-          lastThingRef.current = { id: thingId, category: thingCategory };
-          
-          if (thingData.sprites) {
-            // Get sprites from the DEFAULT frame group (or first available)
-            let spriteIds: number[] = [];
-            
-            // Try to get sprites from frame groups
-            if (thingData.sprites instanceof Map) {
-              // If it's a Map, get sprites from DEFAULT frame group (0)
-              const defaultSprites = thingData.sprites.get(0) || [];
-              spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
-            } else if (Array.isArray(thingData.sprites)) {
-              // If it's an array, use it directly
-              spriteIds = thingData.sprites.map((s: any) => s.id).filter((id: number) => id > 0);
-            } else if (thingData.sprites[0]) {
-              // If it's an object with numeric keys
-              const defaultSprites = thingData.sprites[0] || [];
-              spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
-            }
-            
-            // Load sprite list with first sprite ID if available
-            if (spriteIds.length > 0) {
-              const firstSpriteId = spriteIds[0];
-              loadSpriteList(firstSpriteId);
-              // Select the first sprite in the list
-              setSelectedSpriteIds([firstSpriteId]);
-            } else {
-              setSprites([]);
-              setSelectedSpriteIds([]);
-              setLoading(false);
-            }
-          } else {
-            setSprites([]);
-            setLoading(false);
-          }
-        }
-      }
-    };
-
-    worker.onCommand(handleCommand);
-  }, [worker]);
-
   // Cache to prevent duplicate requests
   const loadingSpriteRef = useRef<number | null>(null);
   
-  const loadSpriteList = async (targetId: number) => {
+  // Define loadSpriteList before it's used in reloadSpritesFromThingData
+  const loadSpriteList = useCallback(async (targetId: number) => {
     // Prevent duplicate requests for the same sprite
     if (loadingSpriteRef.current === targetId) {
       return;
@@ -156,7 +99,98 @@ export const SpriteList: React.FC = () => {
       setLoading(false);
       loadingSpriteRef.current = null;
     }
-  };
+  }, [worker]);
+  
+  // Function to reload sprites from thing data
+  const reloadSpritesFromThingData = useCallback((thingData: any) => {
+    if (!thingData || !thingData.thing) {
+      return;
+    }
+    
+    const thingId = thingData.thing.id;
+    const thingCategory = thingData.thing.category;
+    
+    // Prevent reloading if it's the same thing and category
+    if (lastThingRef.current && 
+        lastThingRef.current.id === thingId && 
+        lastThingRef.current.category === thingCategory) {
+      return;
+    }
+    lastThingRef.current = { id: thingId, category: thingCategory };
+    
+    if (thingData.sprites) {
+      // Get sprites from the DEFAULT frame group (or first available)
+      let spriteIds: number[] = [];
+      
+      // Try to get sprites from frame groups
+      if (thingData.sprites instanceof Map) {
+        // If it's a Map, get sprites from DEFAULT frame group (0)
+        const defaultSprites = thingData.sprites.get(0) || [];
+        spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
+      } else if (Array.isArray(thingData.sprites)) {
+        // If it's an array, use it directly
+        spriteIds = thingData.sprites.map((s: any) => s.id).filter((id: number) => id > 0);
+      } else if (thingData.sprites[0]) {
+        // If it's an object with numeric keys
+        const defaultSprites = thingData.sprites[0] || [];
+        spriteIds = defaultSprites.map((s: any) => s.id).filter((id: number) => id > 0);
+      }
+      
+      // Load sprite list with first sprite ID if available
+      if (spriteIds.length > 0) {
+        const firstSpriteId = spriteIds[0];
+        loadSpriteList(firstSpriteId);
+        // Select the first sprite in the list
+        setSelectedSpriteIds([firstSpriteId]);
+      } else {
+        setSprites([]);
+        setSelectedSpriteIds([]);
+        setLoading(false);
+      }
+    } else {
+      setSprites([]);
+      setLoading(false);
+    }
+  }, [loadSpriteList, setSelectedSpriteIds]);
+  
+  // Flag to indicate that the next SetThingDataCommand should trigger sprite reload
+  const shouldReloadSpritesRef = useRef<number | null>(null);
+  
+  // Listen for explicit reload requests (from Edit or double-click)
+  useEffect(() => {
+    const handleReloadRequest = (event: CustomEvent) => {
+      const thingId = event.detail?.thingId;
+      if (thingId) {
+        // Set flag so next SetThingDataCommand for this thing will trigger reload
+        shouldReloadSpritesRef.current = thingId;
+      }
+    };
+
+    window.addEventListener('reload-sprites-request', handleReloadRequest as EventListener);
+    return () => {
+      window.removeEventListener('reload-sprites-request', handleReloadRequest as EventListener);
+    };
+  }, []);
+  
+  // Listen for SetThingDataCommand and reload sprites only if flag is set
+  useEffect(() => {
+    const handleCommand = (command: any) => {
+      if (command.type === 'SetThingDataCommand') {
+        const thingData = command.data;
+        if (thingData && thingData.thing) {
+          const thingId = thingData.thing.id;
+          
+          // Only reload sprites if this was explicitly requested (Edit or double-click)
+          if (shouldReloadSpritesRef.current === thingId) {
+            shouldReloadSpritesRef.current = null; // Clear flag
+            reloadSpritesFromThingData(thingData);
+          }
+        }
+      }
+    };
+
+    worker.onCommand(handleCommand);
+  }, [worker, reloadSpritesFromThingData]);
 
   const handleSpriteClick = (id: number, e: React.MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {

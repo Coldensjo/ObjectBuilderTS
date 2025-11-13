@@ -224,6 +224,15 @@ export const ThingList: React.FC<ThingListProps> = ({ onPaginationChange, onNavi
     const idsToUse = selectedThingIds.includes(thingId) ? selectedThingIds : [thingId];
     
     switch (action) {
+      case 'edit':
+        // Select the thing and trigger sprite reload
+        setSelectedThingIds([thingId]);
+        // Dispatch event to trigger sprite reload BEFORE loading thing data
+        if (window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('reload-sprites-request', { detail: { thingId } }));
+        }
+        loadThing(thingId);
+        break;
       case 'export':
         // Trigger export dialog
         if (window.dispatchEvent) {
@@ -244,6 +253,16 @@ export const ThingList: React.FC<ThingListProps> = ({ onPaginationChange, onNavi
     }
     
     setContextMenu(null);
+  };
+
+  const handleThingDoubleClick = (id: number) => {
+    // Select the thing and trigger sprite reload
+    setSelectedThingIds([id]);
+    // Dispatch event to trigger sprite reload BEFORE loading thing data
+    if (window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('reload-sprites-request', { detail: { thingId: id } }));
+    }
+    loadThing(id);
   };
 
   // Keyboard navigation (only when list container is focused)
@@ -365,6 +384,7 @@ export const ThingList: React.FC<ThingListProps> = ({ onPaginationChange, onNavi
                   selectedThingIds.includes(thing.id) ? 'selected' : ''
                 }`}
                 onClick={(e) => handleThingClick(thing.id, e)}
+                onDoubleClick={() => handleThingDoubleClick(thing.id)}
                 onContextMenu={(e) => handleContextMenu(e, thing.id)}
                 title={`Thing #${thing.id}${selectedThingIds.length > 1 ? ` (${selectedThingIds.length} selected)` : ''}${thing.name ? ` - ${thing.name}` : ''}`}
               >
@@ -397,6 +417,10 @@ export const ThingList: React.FC<ThingListProps> = ({ onPaginationChange, onNavi
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onMouseLeave={() => setContextMenu(null)}
         >
+          <div className="context-menu-item" onClick={() => handleContextMenuAction('edit')}>
+            Edit
+          </div>
+          <div className="context-menu-separator"></div>
           <div className="context-menu-item" onClick={() => handleContextMenuAction('export')}>
             Export Thing{selectedThingIds.length > 1 ? 's' : ''}
           </div>
